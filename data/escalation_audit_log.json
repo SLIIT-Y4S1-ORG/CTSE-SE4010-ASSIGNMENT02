@@ -1,6 +1,6 @@
 [
   {
-    "timestamp": "2026-04-11T18:17:09.642776",
+    "timestamp": "2026-04-11T20:05:28.372050",
     "ticket_id": "TCK-1001",
     "customer_name": "Alice Smith",
     "decision": "approve",
@@ -8,15 +8,7 @@
     "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
   },
   {
-    "timestamp": "2026-04-11T18:45:33.235456",
-    "ticket_id": "TCK-1001",
-    "customer_name": "Alice Smith",
-    "decision": "approve",
-    "escalate_to": null,
-    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
-  },
-  {
-    "timestamp": "2026-04-11T18:47:13.532608",
+    "timestamp": "2026-04-11T20:05:37.119476",
     "ticket_id": "TCK-1002",
     "customer_name": "Bob Jones",
     "decision": "request_more_info",
@@ -24,55 +16,7 @@
     "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
   },
   {
-    "timestamp": "2026-04-11T18:51:01.464550",
-    "ticket_id": "TCK-1001",
-    "customer_name": "Alice Smith",
-    "decision": "approve",
-    "escalate_to": null,
-    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
-  },
-  {
-    "timestamp": "2026-04-11T18:51:05.477018",
-    "ticket_id": "TCK-1002",
-    "customer_name": "Bob Jones",
-    "decision": "request_more_info",
-    "escalate_to": null,
-    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
-  },
-  {
-    "timestamp": "2026-04-11T18:52:43.972329",
-    "ticket_id": "TCK-1001",
-    "customer_name": "Alice Smith",
-    "decision": "approve",
-    "escalate_to": null,
-    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
-  },
-  {
-    "timestamp": "2026-04-11T18:52:48.086923",
-    "ticket_id": "TCK-1002",
-    "customer_name": "Bob Jones",
-    "decision": "request_more_info",
-    "escalate_to": null,
-    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
-  },
-  {
-    "timestamp": "2026-04-11T18:56:00.602258",
-    "ticket_id": "TCK-1001",
-    "customer_name": "Alice Smith",
-    "decision": "approve",
-    "escalate_to": null,
-    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
-  },
-  {
-    "timestamp": "2026-04-11T18:56:04.391485",
-    "ticket_id": "TCK-1002",
-    "customer_name": "Bob Jones",
-    "decision": "request_more_info",
-    "escalate_to": null,
-    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
-  },
-  {
-    "timestamp": "2026-04-11T18:56:08.400117",
+    "timestamp": "2026-04-11T20:05:40.999759",
     "ticket_id": "TCK-1003",
     "customer_name": "Carol White",
     "decision": "escalate_to_billing",
@@ -80,7 +24,7 @@
     "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
   },
   {
-    "timestamp": "2026-04-11T18:57:22.017687",
+    "timestamp": "2026-04-11T20:06:01.681235",
     "ticket_id": "TCK-1001",
     "customer_name": "Alice Smith",
     "decision": "approve",
@@ -88,7 +32,7 @@
     "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
   },
   {
-    "timestamp": "2026-04-11T18:57:25.980862",
+    "timestamp": "2026-04-11T20:06:05.367615",
     "ticket_id": "TCK-1002",
     "customer_name": "Bob Jones",
     "decision": "request_more_info",
@@ -96,11 +40,59 @@
     "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
   },
   {
-    "timestamp": "2026-04-11T18:57:30.164937",
+    "timestamp": "2026-04-11T20:06:08.496962",
     "ticket_id": "TCK-1003",
     "customer_name": "Carol White",
     "decision": "escalate_to_billing",
     "escalate_to": "billing",
     "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
+  },
+  {
+    "timestamp": "2026-04-11T20:06:12.734663",
+    "ticket_id": "TCK-1004",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Delayed delivery qualifies for automatic compensation per policy."
+  },
+  {
+    "timestamp": "2026-04-11T20:06:16.428808",
+    "ticket_id": "TCK-1005",
+    "customer_name": "Bob Jones",
+    "decision": "escalate_to_human_support",
+    "escalate_to": "human_support",
+    "reason": "Abusive language combined with high urgency requires human supervisor attention."
+  },
+  {
+    "timestamp": "2026-04-11T20:06:19.797065",
+    "ticket_id": "TCK-1006",
+    "customer_name": "Alice Smith",
+    "decision": "escalate_to_human_support",
+    "escalate_to": "human_support",
+    "reason": "Critical urgency ticket requires human support team review."
+  },
+  {
+    "timestamp": "2026-04-11T20:06:23.714512",
+    "ticket_id": "TCK-1007",
+    "customer_name": "Bob Jones",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Unopened item return within 30-day window approved per policy."
+  },
+  {
+    "timestamp": "2026-04-11T20:06:26.264767",
+    "ticket_id": "TCK-1008",
+    "customer_name": "Alice Smith",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Cannot process refund without complete information."
+  },
+  {
+    "timestamp": "2026-04-11T20:06:38.711659",
+    "ticket_id": "TCK-CUSTOM-001",
+    "customer_name": "John Fraud",
+    "decision": "escalate_to_human_support",
+    "escalate_to": "human_support",
+    "reason": "Customer flagged for potential fraud. Requires human review."
   }
 ]

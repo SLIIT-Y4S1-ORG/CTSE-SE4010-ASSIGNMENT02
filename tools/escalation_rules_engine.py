@@ -165,10 +165,30 @@ def apply_escalation_rules(
             "next_steps": next_steps
         }
     
+    # Rule 1: Check for abusive language EARLY (before category rules)
+    # Abusive customers need human supervisor, regardless of category
+    abusive_keywords = ["stupid", "terrible", "disgust", "hate", "absolutely unacceptable", "unacceptable"]
+    has_abusive_language = any(keyword in ticket_text.lower() for keyword in abusive_keywords)
+    
+    if has_abusive_language and urgency == "high":
+        decision = "escalate_to_human_support"
+        escalate_to = "human_support"
+        reason = "Abusive language combined with high urgency requires human supervisor attention."
+        next_steps = [
+            "Route ticket to human supervisor",
+            "Flag for sensitivity training check",
+            "Prepare empathetic response template"
+        ]
+        log_escalation_decision(ticket_id, customer_name, decision, escalate_to, reason)
+        return {
+            "decision": decision,
+            "escalate_to": escalate_to,
+            "reason": reason,
+            "next_steps": next_steps
+        }
+    
     # ========================================================================
-    # CATEGORY-SPECIFIC RULES (Rule 2-5): Check these BEFORE general status rules
-    # This ensures that policy-driven escalations take priority over sentiment-based rules
-    # ========================================================================
+    # CATEGORY-SPECIFIC RULES (Rule 2-5): Check these AFTER abuse/fraud checks
     
     # Rule 2: Damaged Item Handling
     if category == "damaged_item":
@@ -293,24 +313,8 @@ def apply_escalation_rules(
             ]
     
     # ========================================================================
-    # GENERAL STATUS RULES (Rule 1, 6, 6b, 7, 8): Applied after category rules
+    # GENERAL STATUS RULES (Rule 6, 6b, 7, 8): Applied after category rules
     # ========================================================================
-    
-    # Rule 1: Check for abusive language (applied AFTER category-specific rules)
-    # Only escalate if no category matched, or if truly aggressive behavior despite policy
-    abusive_keywords = ["stupid", "unacceptable", "disgust", "hate", "absolutely unacceptable"]
-    has_abusive_language = any(keyword in ticket_text.lower() for keyword in abusive_keywords)
-    
-    # Only apply abusive language rule if we haven't already determined a category-based decision
-    if has_abusive_language and urgency == "high" and decision == "approve":
-        decision = "escalate_to_human_support"
-        escalate_to = "human_support"
-        reason = "Abusive language combined with high urgency requires human supervisor attention."
-        next_steps = [
-            "Route ticket to human supervisor",
-            "Flag for sensitivity training check",
-            "Prepare empathetic response template"
-        ]
     
     # Rule 6: High Severity/Sentiment Cases
     if urgency == "critical" and not decision.startswith("escalate"):

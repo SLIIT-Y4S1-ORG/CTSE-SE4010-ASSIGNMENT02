@@ -1,0 +1,30 @@
+{
+  "damaged_item": [
+    {
+      "title": "Damaged Item Refund Policy",
+      "content": "Customers are eligible for a full refund or replacement for items damaged in transit within 7 days of delivery. A clear photo of the damaged item is strictly required before processing."
+    },
+    {
+      "title": "Return Shipping for Damaged Goods",
+      "content": "Do not ask the customer to return the damaged item unless it is valued over $100. For items under $100, they may dispose of it after the refund is approved."
+    }
+  ],
+  "delayed_delivery": [
+    {
+      "title": "Late Delivery Protocol",
+      "content": "If an order is delayed by more than 3 business days past the estimated delivery date, offer the customer a 15% discount code for their next purchase. If delayed by more than 10 days, offer a full refund."
+    }
+  ],
+  "billing_issue": [
+    {
+      "title": "Double Charge Policy",
+      "content": "If a customer claims they were charged twice, apologize and immediately escalate the ticket to the Billing Support Team for verification. Do not promise a refund until billing verifies."
+    }
+  ],
+  "refund_request": [
+    {
+      "title": "Standard Change-of-Mind Return",
+      "content": "Unopened items can be returned for a full refund within 30 days. The customer is responsible for return shipping costs."
+    }
+  ]
+}

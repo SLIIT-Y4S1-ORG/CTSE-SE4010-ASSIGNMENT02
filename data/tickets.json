@@ -1,0 +1,32 @@
+[
+  {
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "text": "Hi, I received my coffee mug today but the handle is completely shattered. I have attached a picture of the broken mug and the box it came in. I would like my money back.",
+    "metadata": {
+      "order_id": "ORD-5592",
+      "has_attachments": true
+    },
+    "expected_behavior": "Easy win. Agent 1 classifies as 'damaged_item'. Agent 2 finds the refund rule. Agent 3 approves it because a photo is attached. Agent 4 drafts an approval."
+  },
+  {
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "text": "My new headphones arrived broken. The left ear doesn't work at all. Please send me a new one immediately.",
+    "metadata": {
+      "order_id": "ORD-8821",
+      "has_attachments": false
+    },
+    "expected_behavior": "Missing info case. Agent 1 notes it's a damaged item but missing a photo. Agent 3 decides to ask for more info. Agent 4 drafts an email asking Bob for a picture."
+  },
+  {
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "text": "I checked my bank statement and you guys charged me $45 TWICE for the same order! This is ridiculous, fix it now!",
+    "metadata": {
+      "order_id": "ORD-1104",
+      "has_attachments": false
+    },
+    "expected_behavior": "Escalation case. Agent 1 classifies as 'billing_issue'. Agent 2 fetches the double-charge policy. Agent 3 escalates to the Billing Team. Agent 4 writes an empathetic delay message."
+  }
+]

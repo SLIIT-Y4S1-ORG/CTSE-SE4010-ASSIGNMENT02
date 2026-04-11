@@ -1,0 +1,26 @@
+{
+  "Alice Smith": {
+    "previous_tickets": 1,
+    "repeat_complainant": false,
+    "fraud_flagged": false,
+    "satisfaction_rating": 4.5
+  },
+  "Bob Jones": {
+    "previous_tickets": 2,
+    "repeat_complainant": false,
+    "fraud_flagged": false,
+    "satisfaction_rating": 3.0
+  },
+  "Carol White": {
+    "previous_tickets": 5,
+    "repeat_complainant": true,
+    "fraud_flagged": false,
+    "satisfaction_rating": 2.0
+  },
+  "John Fraud": {
+    "previous_tickets": 12,
+    "repeat_complainant": true,
+    "fraud_flagged": true,
+    "satisfaction_rating": 1.0
+  }
+}

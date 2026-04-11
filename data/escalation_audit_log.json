@@ -1,0 +1,106 @@
+[
+  {
+    "timestamp": "2026-04-11T18:17:09.642776",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-11T18:45:33.235456",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-11T18:47:13.532608",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-11T18:51:01.464550",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-11T18:51:05.477018",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-11T18:52:43.972329",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-11T18:52:48.086923",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-11T18:56:00.602258",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-11T18:56:04.391485",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-11T18:56:08.400117",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
+  },
+  {
+    "timestamp": "2026-04-11T18:57:22.017687",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-11T18:57:25.980862",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-11T18:57:30.164937",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
+  }
+]

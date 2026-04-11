@@ -11,7 +11,7 @@ def search_knowledge_base(category: str, file_path: str = "data/policies.json", 
         if category in knowledge_base:
             return knowledge_base[category][:top_k]
         else:
-            # Fallback if Agent 1 gives us a weird category
+            # Fallback if Classification Agent gives us a weird category
             return [{"title": "General Policy", "content": "Refer to standard terms and conditions. Escalate to human if unsure."}]
             
     except FileNotFoundError:

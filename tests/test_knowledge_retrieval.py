@@ -6,7 +6,7 @@ def test_knowledge_retrieval_node_valid_category():
     # Setup mock state
     mock_state: SupportState = {"category": "damaged_item"}
     
-    # Run agent
+    # Run knowledge retrieval agent
     result = knowledge_retrieval_node(mock_state)
     
     # Assertions to prove it worked
@@ -19,7 +19,7 @@ def test_knowledge_retrieval_node_unknown_category():
     # Setup mock state with a category that doesn't exist in our JSON
     mock_state: SupportState = {"category": "weird_unknown_issue"}
     
-    # Run agent
+    # Run knowledge retrieval agent
     result = knowledge_retrieval_node(mock_state)
     
     # Assertions to prove it didn't crash and returned the fallback

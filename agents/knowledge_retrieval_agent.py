@@ -10,7 +10,7 @@ def knowledge_retrieval_node(state: SupportState):
     ticket_category = state.get("category", "unknown")
     print(f"\n[Agent 2] Searching knowledge base for category: '{ticket_category}'...")
     
-    # 2. Call your custom Python tool
+    # 2. Calls FAQ search Python tool
     evidence = search_knowledge_base(category=ticket_category)
     
     # 3. Format the results into a clean list of strings
@@ -19,8 +19,7 @@ def knowledge_retrieval_node(state: SupportState):
         formatted_policies.append(f"{item['title']}: {item['content']}")
         print(f"   -> Found: {item['title']}")
         
-    # 4. Return ONLY the field you are responsible for updating.
-    # LangGraph will use operator.add to safely append this to the list.
+    # 4. Return the new state update with the retrieved policies
     return {
         "policy_matches": formatted_policies
     }

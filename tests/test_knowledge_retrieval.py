@@ -2,27 +2,34 @@ from app.state import SupportState
 from agents.knowledge_retrieval_agent import knowledge_retrieval_node
 
 def test_knowledge_retrieval_node_valid_category():
-    """Test that the agent finds correct policies for known categories."""
     # Setup mock state
-    mock_state: SupportState = {"category": "damaged_item"}
-    
-    # Run knowledge retrieval agent
-    result = knowledge_retrieval_node(mock_state)
-    
-    # Assertions to prove it worked
-    assert "policy_matches" in result
-    assert len(result["policy_matches"]) == 2
-    assert "Damaged Item Refund Policy" in result["policy_matches"][0]
+    mock_state: SupportState = {
+        "ticket_text": "My item arrived completely smashed, I want my money back.",
+        "category": "damaged_item"
+    }
 
-def test_knowledge_retrieval_node_unknown_category():
-    """Test that the agent handles weird or missing categories safely."""
-    # Setup mock state with a category that doesn't exist in our JSON
-    mock_state: SupportState = {"category": "weird_unknown_issue"}
-    
-    # Run knowledge retrieval agent
+    # Run agent
     result = knowledge_retrieval_node(mock_state)
-    
-    # Assertions to prove it didn't crash and returned the fallback
+
+    # Assertions
     assert "policy_matches" in result
     assert len(result["policy_matches"]) == 1
-    assert "General Policy" in result["policy_matches"][0]
+
+    # Validate key policy ideas from the AI summary
+    ai_summary = result["policy_matches"][0].lower()
+    assert "refund" in ai_summary
+    assert "photo" in ai_summary or "proof" in ai_summary
+
+def test_knowledge_retrieval_node_unknown_category():
+    mock_state: SupportState = {
+        "ticket_text": "Do you guys sell hotdogs?",
+        "category": "weird_unknown_issue"
+    }
+
+    result = knowledge_retrieval_node(mock_state)
+
+    assert "policy_matches" in result
+    assert len(result["policy_matches"]) == 1
+
+    ai_summary = result["policy_matches"][0].lower()
+    assert "terms" in ai_summary or "escalate" in ai_summary or "policy" in ai_summary

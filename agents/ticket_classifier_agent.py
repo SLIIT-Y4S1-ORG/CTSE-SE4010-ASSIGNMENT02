@@ -23,9 +23,10 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 import sys
 import textwrap
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 # Support direct script execution: `python agents/ticket_classifier_agent.py`
 if __package__ in (None, ""):
@@ -39,12 +40,100 @@ from tools.ticket_classifier_tool import classify_ticket
 from tracing.tracer import get_tracer
 
 # ---------------------------------------------------------------------------
-# LLM setup — local Ollama, llama3.2, deterministic
-# ---------------------------------------------------------------------------
-llm = ChatOllama(model="llama3.2", temperature=0)
-
 # Module-level tracer
+# ---------------------------------------------------------------------------
 tracer = get_tracer("ticket_classifier_agent")
+
+# ---------------------------------------------------------------------------
+# LLM setup — local Ollama with model fallback
+# ---------------------------------------------------------------------------
+DEFAULT_MODEL_CANDIDATES = ("llama3.2", "llama3.1", "llama3", "mistral")
+
+
+def _model_candidates() -> List[str]:
+    """Build an ordered, de-duplicated model candidate list."""
+    configured = os.getenv("TICKET_CLASSIFIER_MODEL", "").strip()
+    candidates: List[str] = []
+    if configured:
+        candidates.append(configured)
+    candidates.extend(DEFAULT_MODEL_CANDIDATES)
+
+    ordered_unique: List[str] = []
+    seen = set()
+    for model in candidates:
+        key = model.strip().lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        ordered_unique.append(model.strip())
+    return ordered_unique
+
+
+def _installed_ollama_models() -> List[str]:
+    """Return locally installed Ollama model names (best effort)."""
+    try:
+        completed = subprocess.run(
+            ["ollama", "list"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return []
+
+    if completed.returncode != 0 or not completed.stdout:
+        return []
+
+    installed: List[str] = []
+    for line in completed.stdout.splitlines():
+        line = line.strip()
+        if not line or line.upper().startswith("NAME"):
+            continue
+        first_column = line.split()[0]
+        if first_column:
+            installed.append(first_column)
+    return installed
+
+
+def _is_missing_model_error(exc: Exception) -> bool:
+    """Detect Ollama model-not-found errors."""
+    message = str(exc).lower()
+    return "not found" in message and "404" in message
+
+
+def _invoke_with_model_fallback(messages: List[Any]) -> Dict[str, Any]:
+    """Try invoking ChatOllama using fallback model candidates."""
+    last_error: Exception | None = None
+    tried: List[str] = []
+    installed = _installed_ollama_models()
+
+    if installed:
+        candidate_pool = [m for m in _model_candidates() if m in installed]
+        if not candidate_pool:
+            candidate_pool = installed
+    else:
+        candidate_pool = _model_candidates()
+
+    for model_name in candidate_pool:
+        tried.append(model_name)
+        model = ChatOllama(model=model_name, temperature=0)
+        try:
+            response = model.invoke(messages)
+            return {"response": response, "model": model_name}
+        except Exception as exc:
+            last_error = exc
+            if _is_missing_model_error(exc):
+                tracer.warning(
+                    "LLM_MODEL_UNAVAILABLE",
+                    extra={"model": model_name, "reason": str(exc)},
+                )
+                continue
+            raise
+
+    tried_str = ", ".join(tried) if tried else "(none)"
+    raise RuntimeError(
+        f"No compatible Ollama model found. Tried: {tried_str}"
+    ) from last_error
 
 # ---------------------------------------------------------------------------
 # System prompt — persona-driven, output-constrained
@@ -231,7 +320,7 @@ def ticket_classifier_node(state: SupportState) -> Dict[str, Any]:
     # ------------------------------------------------------------------
     # Step 2 — LLM validation / correction pass
     # ------------------------------------------------------------------
-    print("[Step 2/3] Validating with Llama 3.2")
+    print("[Step 2/3] Validating with local LLM (Ollama)")
 
     human_message = HumanMessage(
         content=(
@@ -243,9 +332,15 @@ def ticket_classifier_node(state: SupportState) -> Dict[str, Any]:
     )
 
     try:
-        llm_response = llm.invoke([SystemMessage(content=SYSTEM_PROMPT), human_message])
+        invocation = _invoke_with_model_fallback(
+            [SystemMessage(content=SYSTEM_PROMPT), human_message]
+        )
+        llm_response = invocation["response"]
         final_data = _extract_json(llm_response.content)
-        tracer.info("LLM_OUTPUT", extra={"raw": llm_response.content})
+        tracer.info(
+            "LLM_OUTPUT",
+            extra={"model": invocation["model"], "raw": llm_response.content},
+        )
     except Exception as exc:
         # LLM failure — fall back to tool output
         tracer.warning(
@@ -300,9 +395,9 @@ classify_ticket_node = ticket_classifier_node
 
 def _run_interactive() -> int:
     """Interactive command-line runner for manual Agent 1 checks."""
-    _print_section("Agent 1 Interactive Runner")
-    print("Describe your support issue")
-    user_ticket = input("Enter ticket text: ").strip()
+    _print_section("Intent Classification Agent")
+    print("Describe your issue and we'll route it to the right support team.")
+    user_ticket = input("Enter your support issue:").strip()
 
     if not user_ticket:
         print("No ticket text provided. Exiting.")

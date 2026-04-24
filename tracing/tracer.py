@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 """
 tracer.py
 ---------
@@ -199,3 +200,48 @@ def get_tracer(agent_name: str) -> AgentTracer:
         logger.addHandler(pretty_handler)
 
     return AgentTracer(agent_name=agent_name, logger=logger)
+=======
+from __future__ import annotations
+
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, Optional
+import json
+
+
+TRACE_FILE = Path(__file__).resolve().parent / "agent_trace.log"
+
+
+def _write_log_line(payload: Dict[str, Any]) -> None:
+	TRACE_FILE.parent.mkdir(parents=True, exist_ok=True)
+	with TRACE_FILE.open("a", encoding="utf-8") as file:
+		file.write(json.dumps(payload, ensure_ascii=True) + "\n")
+
+
+def trace_event(agent_name: str, event: str, data: Optional[Dict[str, Any]] = None) -> None:
+	"""Write a structured trace event to console and local log file."""
+	payload = {
+		"timestamp": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+		"agent": agent_name,
+		"event": event,
+		"data": data or {},
+	}
+	print(f"[{agent_name}] {event}: {payload['data']}")
+	_write_log_line(payload)
+
+
+def log_agent_input(agent_name: str, ticket_text: str) -> None:
+	trace_event(agent_name, "agent_input", {"ticket_text": ticket_text})
+
+
+def log_tool_call(agent_name: str, tool_name: str, inputs: Dict[str, Any]) -> None:
+	trace_event(agent_name, "tool_call", {"tool": tool_name, "inputs": inputs})
+
+
+def log_tool_output(agent_name: str, tool_name: str, output: Dict[str, Any]) -> None:
+	trace_event(agent_name, "tool_output", {"tool": tool_name, "output": output})
+
+
+def log_final_output(agent_name: str, output: Dict[str, Any]) -> None:
+	trace_event(agent_name, "final_output", output)
+>>>>>>> Stashed changes

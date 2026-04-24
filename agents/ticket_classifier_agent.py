@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 """
 ticket_classifier_agent.py
 ---------------------------
@@ -418,3 +419,143 @@ def _run_interactive() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(_run_interactive())
+=======
+from __future__ import annotations
+
+from pathlib import Path
+import sys
+from typing import Any, Dict, List
+
+# Add project root to path for direct execution
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(_PROJECT_ROOT) not in sys.path:
+	sys.path.insert(0, str(_PROJECT_ROOT))
+
+from app.state import SupportState
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_ollama import ChatOllama
+from tools.ticket_classifier_tool import classify_ticket
+from tracing.tracer import (
+	log_agent_input,
+	log_final_output,
+	log_tool_call,
+	log_tool_output,
+)
+
+
+llm = ChatOllama(model="llama3.2", temperature=0)
+
+
+def _extract_value_from_text(text: str, key: str, allowed: List[str]) -> str:
+	"""Lightweight parser for optional LLM refinements from plain text."""
+	lowered = text.lower()
+	for value in allowed:
+		if f"{key}: {value}" in lowered:
+			return value
+	return ""
+
+
+def _extract_missing_info_from_text(text: str) -> List[str]:
+	lowered = text.lower()
+	detected: List[str] = []
+	for field in ["order_id", "evidence_attachment", "product_details", "account_email"]:
+		if field in lowered:
+			detected.append(field)
+	return detected
+
+
+def ticket_classifier_node(state: SupportState) -> Dict[str, Any]:
+	"""Agent 1: classify ticket intent, urgency, sentiment, and missing information."""
+	agent_name = "Agent 1 - Intent Classification"
+	ticket_text = state.get("ticket_text", "")
+
+	log_agent_input(agent_name, ticket_text)
+
+	if not ticket_text.strip():
+		result = {
+			"user_input": ticket_text,
+			"category": "missing_information",
+			"urgency": "low",
+			"sentiment": "neutral",
+			"missing_information": ["order_id", "product_details"],
+		}
+		log_final_output(agent_name, result)
+		return result
+
+	# 1) Rule-based classification tool call
+	log_tool_call(agent_name, "classify_ticket", {"ticket_text": ticket_text})
+	tool_result = classify_ticket(ticket_text)
+	log_tool_output(agent_name, "classify_ticket", tool_result)
+
+	# 2) LLM confirmation/refinement in human-readable structured style
+	system_prompt = SystemMessage(
+		content="""
+You are an Intent Classification Assistant for customer support triage.
+
+You receive a draft ticket classification from a rules tool.
+Keep the same structure and only adjust values if clearly more accurate.
+
+Output format (plain text, not JSON):
+Category: <one value>
+Urgency: <low|medium|high>
+Sentiment: <positive|neutral|negative>
+Missing Information: <comma-separated field names or none>
+
+Allowed categories:
+damaged_item, refund_request, billing_issue, shipping_issue,
+technical_issue, account_issue, missing_information, other
+"""
+	)
+
+	human_prompt = HumanMessage(
+		content=(
+			f"Ticket Text:\n{ticket_text}\n\n"
+			"Draft Classification from Tool:\n"
+			f"Category: {tool_result.get('category', 'other')}\n"
+			f"Urgency: {tool_result.get('urgency', 'medium')}\n"
+			f"Sentiment: {tool_result.get('sentiment', 'neutral')}\n"
+			"Missing Information: "
+			f"{', '.join(tool_result.get('missing_information', [])) or 'none'}"
+		)
+	)
+
+	ai_response = llm.invoke([system_prompt, human_prompt])
+	refined_text = str(ai_response.content)
+
+	refined_category = _extract_value_from_text(
+		refined_text,
+		"category",
+		[
+			"damaged_item",
+			"refund_request",
+			"billing_issue",
+			"shipping_issue",
+			"technical_issue",
+			"account_issue",
+			"missing_information",
+			"other",
+		],
+	)
+	refined_urgency = _extract_value_from_text(refined_text, "urgency", ["low", "medium", "high"])
+	refined_sentiment = _extract_value_from_text(
+		refined_text,
+		"sentiment",
+		["positive", "neutral", "negative"],
+	)
+	refined_missing = _extract_missing_info_from_text(refined_text)
+
+	final_result = {
+		"user_input": ticket_text,
+		"category": refined_category or tool_result.get("category", "other"),
+		"urgency": refined_urgency or tool_result.get("urgency", "medium"),
+		"sentiment": refined_sentiment or tool_result.get("sentiment", "neutral"),
+		"missing_information": refined_missing or tool_result.get("missing_information", []),
+	}
+
+	log_final_output(agent_name, final_result)
+	return final_result
+
+
+# Backward-compatible alias
+classifier_node = ticket_classifier_node
+>>>>>>> Stashed changes

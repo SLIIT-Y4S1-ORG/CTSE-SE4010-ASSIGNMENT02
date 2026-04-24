@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 """
 ticket_classifier_tool.py
 --------------------------
@@ -124,10 +125,19 @@ EVIDENCE_REQUIRED_CATEGORIES: List[str] = ["damaged_item"]
 
 # Categories that always need an order ID
 ORDER_ID_REQUIRED_CATEGORIES: List[str] = [
+=======
+from __future__ import annotations
+
+from typing import Dict, List
+
+
+CATEGORIES = [
+>>>>>>> Stashed changes
     "damaged_item",
     "refund_request",
     "billing_issue",
     "shipping_issue",
+<<<<<<< Updated upstream
 ]
 
 # Categories that always need account email
@@ -287,3 +297,241 @@ def classify_ticket(ticket_text: str) -> Dict[str, object]:
         "missing_information": missing,
         "confidence": cat_confidence,
     }
+=======
+    "technical_issue",
+    "account_issue",
+    "missing_information",
+    "other",
+]
+
+URGENCY_LEVELS = ["low", "medium", "high"]
+SENTIMENT_LEVELS = ["positive", "neutral", "negative"]
+MISSING_INFO_FIELDS = [
+    "order_id",
+    "evidence_attachment",
+    "product_details",
+    "account_email",
+]
+
+
+CATEGORY_KEYWORDS = {
+    "damaged_item": [
+        "broken",
+        "shattered",
+        "cracked",
+        "damaged",
+        "defective",
+        "doesn't work",
+        "doesnt work",
+        "not working",
+    ],
+    "refund_request": [
+        "refund",
+        "money back",
+        "return",
+        "cancel order",
+        "cancel my order",
+    ],
+    "billing_issue": [
+        "charged",
+        "double charge",
+        "charged twice",
+        "billing",
+        "invoice",
+        "payment issue",
+        "overcharged",
+    ],
+    "shipping_issue": [
+        "late",
+        "delayed",
+        "delivery",
+        "shipping",
+        "not arrived",
+        "where is my package",
+        "tracking",
+    ],
+    "technical_issue": [
+        "error",
+        "bug",
+        "crash",
+        "cannot login",
+        "can't login",
+        "cant login",
+        "app not working",
+        "system down",
+    ],
+    "account_issue": [
+        "password",
+        "account",
+        "sign in",
+        "login",
+        "locked",
+        "email changed",
+        "unauthorized",
+        "hacked",
+    ],
+}
+
+
+HIGH_URGENCY_KEYWORDS = [
+    "immediately",
+    "urgent",
+    "asap",
+    "right now",
+    "fix it now",
+    "system down",
+    "charged twice",
+    "dispute",
+]
+
+MEDIUM_URGENCY_KEYWORDS = [
+    "soon",
+    "today",
+    "frustrating",
+    "please help",
+    "need help",
+]
+
+NEGATIVE_SENTIMENT_KEYWORDS = [
+    "ridiculous",
+    "angry",
+    "terrible",
+    "awful",
+    "disappointed",
+    "shattered",
+    "broken",
+    "furious",
+    "bad service",
+]
+
+POSITIVE_SENTIMENT_KEYWORDS = [
+    "thanks",
+    "thank you",
+    "appreciate",
+    "great",
+    "happy",
+    "pleased",
+]
+
+
+ATTACHMENT_KEYWORDS = [
+    "attached",
+    "attachment",
+    "photo",
+    "picture",
+    "screenshot",
+    "image",
+    "evidence",
+]
+
+PRODUCT_DETAIL_KEYWORDS = [
+    "mug",
+    "headphones",
+    "phone",
+    "laptop",
+    "charger",
+    "item",
+    "product",
+    "order",
+]
+
+
+def _contains_any(text: str, keywords: List[str]) -> bool:
+    return any(keyword in text for keyword in keywords)
+
+
+def _detect_category(normalized_text: str) -> str:
+    scores: Dict[str, int] = {category: 0 for category in CATEGORIES}
+
+    for category, keywords in CATEGORY_KEYWORDS.items():
+        for keyword in keywords:
+            if keyword in normalized_text:
+                scores[category] += 1
+
+    best_category = max(scores, key=scores.get)
+    if scores[best_category] == 0:
+        if len(normalized_text.split()) < 4:
+            return "missing_information"
+        return "other"
+
+    return best_category
+
+
+def _detect_urgency(normalized_text: str) -> str:
+    if _contains_any(normalized_text, HIGH_URGENCY_KEYWORDS):
+        return "high"
+    if _contains_any(normalized_text, MEDIUM_URGENCY_KEYWORDS):
+        return "medium"
+    return "low"
+
+
+def _detect_sentiment(normalized_text: str) -> str:
+    if _contains_any(normalized_text, NEGATIVE_SENTIMENT_KEYWORDS):
+        return "negative"
+    if _contains_any(normalized_text, POSITIVE_SENTIMENT_KEYWORDS):
+        return "positive"
+    return "neutral"
+
+
+def _detect_missing_information(normalized_text: str) -> List[str]:
+    missing: List[str] = []
+
+    # Basic order id pattern: ord-1234 or order #1234
+    has_order_id = "ord-" in normalized_text or "order #" in normalized_text or "order id" in normalized_text
+    if not has_order_id:
+        missing.append("order_id")
+
+    if not _contains_any(normalized_text, ATTACHMENT_KEYWORDS):
+        missing.append("evidence_attachment")
+
+    if not _contains_any(normalized_text, PRODUCT_DETAIL_KEYWORDS):
+        missing.append("product_details")
+
+    has_account_email = "@" in normalized_text or "account email" in normalized_text or "my email" in normalized_text
+    if not has_account_email:
+        missing.append("account_email")
+
+    return missing
+
+
+def classify_ticket(ticket_text: str) -> Dict[str, object]:
+    """Classify a support ticket using rule-based keyword logic.
+
+    Args:
+        ticket_text: Raw customer ticket text.
+
+    Returns:
+        Dictionary containing category, urgency, sentiment, and missing_information.
+
+    Raises:
+        ValueError: If ticket_text is not a non-empty string.
+    """
+    if not isinstance(ticket_text, str):
+        raise ValueError("ticket_text must be a string")
+
+    normalized_text = ticket_text.strip().lower()
+    if not normalized_text:
+        raise ValueError("ticket_text cannot be empty")
+
+    try:
+        category = _detect_category(normalized_text)
+        urgency = _detect_urgency(normalized_text)
+        sentiment = _detect_sentiment(normalized_text)
+        missing_information = _detect_missing_information(normalized_text)
+
+        return {
+            "category": category,
+            "urgency": urgency,
+            "sentiment": sentiment,
+            "missing_information": missing_information,
+        }
+    except Exception as exc:
+        # Safe fallback so the pipeline can continue even if a rule path fails.
+        return {
+            "category": "other",
+            "urgency": "medium",
+            "sentiment": "neutral",
+            "missing_information": ["order_id", "product_details"],
+            "error": str(exc),
+        }
+>>>>>>> Stashed changes

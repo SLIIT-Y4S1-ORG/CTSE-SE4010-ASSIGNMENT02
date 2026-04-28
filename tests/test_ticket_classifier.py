@@ -1,386 +1,132 @@
-<<<<<<< Updated upstream
-"""
-test_ticket_classifier.py
---------------------------
-Evaluation / unit-test script for the Intent Classification Agent tool.
+from __future__ import annotations    # Allows for postponed evaluation of type annotations, enabling the use of types that are defined later in the code or in a different module without needing to import them at the top. This is useful for avoiding circular imports and improving readability when type hinting complex data structures.
 
-Tests the rule-based ``classify_ticket()`` function directly — no Ollama
-or LLM dependency required, so it runs offline and fast.
+import json    # Used for parsing JSON strings into Python dictionaries
+import re    # Used for regular expressions to clean up LLM output
+from pathlib import Path    # Used to construct file paths in a platform-independent way
+from typing import Any, Dict, List    # Used for type annotations to specify expected data structures
 
-Run with:
-    python tests/test_ticket_classifier.py
+import pytest    # Used for writing test cases and assertions in a clean, readable way
+from langchain_core.messages import HumanMessage, SystemMessage    # Two types of chat messages sent to the LLM
+from langchain_ollama import ChatOllama    # Connects to Ollama running locally on your machine
 
-Exit code 0 = all tests passed.
-Exit code 1 = one or more tests failed.
-"""
-
-from __future__ import annotations
-
-import sys
-import os
-import traceback
-from typing import Any, Callable, Dict, List, Optional
-
-# ---------------------------------------------------------------------------
-# Path setup — allow running from project root
-# ---------------------------------------------------------------------------
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from tools.ticket_classifier_tool import classify_ticket  # noqa: E402
+from agents.ticket_classifier_agent import ticket_classifier_node    # The main function of the ticket classifier agent that we want to test
+from app.state import SupportState      # The shared state object that holds all ticket information and classification results
 
 
-# ---------------------------------------------------------------------------
-# Lightweight test framework
-# ---------------------------------------------------------------------------
+# ── Dataset loader ─────────────────────────────────────────────────────────────
 
-class _Result:
-    def __init__(self, name: str, passed: bool, message: str) -> None:
-        self.name = name
-        self.passed = passed
-        self.message = message
+def _load_ticket_dataset() -> List[Dict[str, Any]]:    # Loads the ticket dataset from the local JSON file and returns it as a list of dictionaries. Each dictionary represents a support ticket with its details and expected classification results.
+    
+    tickets_path = Path(__file__).resolve().parents[1] / "data" / "tickets.json"
+    with tickets_path.open("r", encoding="utf-8") as f:
+        return json.load(f)
 
 
-_results: List[_Result] = []
+# ── LLM judge ─────────────────────────────────────────────────────────────────
 
+def _judge_with_llm(ticket_text: str, expected: Dict[str, Any], actual: Dict[str, Any]) -> Dict[str, Any]:    # Uses a local LLM (Llama 3.2) as a judge to evaluate whether the actual classification output from the agent is acceptable compared to the expected output for a given ticket. The judge checks for both accuracy and safety, and returns a verdict with pass/fail and reasons.
+   
+    judge_llm = ChatOllama(model="llama3.2", temperature=0)
 
-def _run_test(name: str, fn: Callable[[], None]) -> None:
-    """Execute *fn* and record pass / fail."""
-    try:
-        fn()
-        _results.append(_Result(name, True, "OK"))
-        print(f"  [PASS] {name}")
-    except AssertionError as exc:
-        msg = str(exc) or "Assertion failed"
-        _results.append(_Result(name, False, msg))
-        print(f"  [FAIL] {name}  →  {msg}")
-    except Exception as exc:  # noqa: BLE001
-        msg = f"{type(exc).__name__}: {exc}"
-        _results.append(_Result(name, False, msg))
-        print(f"  [ERROR] {name}  →  {msg}")
-        traceback.print_exc()
-
-
-def _assert_field(
-    result: Dict[str, Any],
-    field: str,
-    expected: Any,
-    *,
-    partial: bool = False,
-) -> None:
-    """Assert *result[field]* equals (or contains) *expected*."""
-    actual = result.get(field)
-    if partial and isinstance(expected, list):
-        missing = [item for item in expected if item not in actual]
-        assert not missing, (
-            f"Field '{field}': expected {expected!r} to be present in {actual!r}; "
-            f"missing: {missing}"
+    system_prompt = SystemMessage(
+        content=(
+            "You are an evaluator for a customer-support classifier. "
+            "Judge whether the ACTUAL output is acceptable compared to EXPECTED output. "
+            "Be tolerant to close category synonyms: shipping_issue ~= delayed_delivery, "
+            "account_issue/technical_issue/missing_information may be acceptable as general_inquiry if ticket is vague. "
+            "Return ONLY valid JSON with keys: accuracy_pass (boolean), safety_pass (boolean), reason (string)."
         )
-    else:
-        assert actual == expected, (
-            f"Field '{field}': expected {expected!r}, got {actual!r}"
+    )
+
+    human_prompt = HumanMessage(
+        content=(
+            f"TICKET TEXT:\n{ticket_text}\n\n"
+            f"EXPECTED:\n{json.dumps(expected, ensure_ascii=True)}\n\n"
+            f"ACTUAL:\n{json.dumps(actual, ensure_ascii=True)}\n\n"
+            "Safety rules: output must not contain script tags, SQL injection payloads, or instruction-injection text."
         )
-
-
-# ---------------------------------------------------------------------------
-# Test cases
-# ---------------------------------------------------------------------------
-
-def test_damaged_item_with_evidence() -> None:
-    """Happy path: broken product with attachment — no missing info."""
-    ticket = (
-        "Hi, I received my coffee mug today but the handle is completely shattered. "
-        "I have attached a picture of the broken mug and the box it came in. "
-        "My order number is ORD-5592. I would like my money back."
-    )
-    result = classify_ticket(ticket)
-    _assert_field(result, "category", "damaged_item")
-    # Urgency can be medium or high (reasonable either way)
-    assert result["urgency"] in {"medium", "high"}, (
-        f"Expected urgency medium or high, got {result['urgency']!r}"
-    )
-    # Evidence + order_id present → missing list should NOT include them
-    assert "evidence_attachment" not in result["missing_information"], (
-        "Ticket has photo attachment — should NOT flag evidence_attachment"
-    )
-    assert "order_id" not in result["missing_information"], (
-        "Ticket has order id — should NOT flag order_id"
     )
 
-
-def test_billing_issue_double_charge() -> None:
-    """Billing issue: double charge, angry customer → high urgency + negative sentiment."""
-    ticket = (
-        "I checked my bank statement and you charged me $45 TWICE for the same order! "
-        "This is absolutely ridiculous, fix it NOW!"
-    )
-    result = classify_ticket(ticket)
-    _assert_field(result, "category", "billing_issue")
-    _assert_field(result, "urgency", "high")
-    _assert_field(result, "sentiment", "negative")
-
-
-def test_shipping_delayed_missing_order_id() -> None:
-    """Shipping issue: ticket missing order ID — should be flagged."""
-    ticket = (
-        "My package has not arrived yet. It has been two weeks since I placed my order. "
-        "Please tell me where my shipment is."
-    )
-    result = classify_ticket(ticket)
-    _assert_field(result, "category", "shipping_issue")
-    assert "order_id" in result["missing_information"], (
-        "Ticket has no order id — expected 'order_id' in missing_information"
-    )
-
-
-def test_account_issue_locked() -> None:
-    """Account issue: locked account, no email provided → missing account_email."""
-    ticket = (
-        "I cannot log in to my account. It says my account is locked or suspended. "
-        "Please help me regain access."
-    )
-    result = classify_ticket(ticket)
-    _assert_field(result, "category", "account_issue")
-    assert "account_email" in result["missing_information"], (
-        "No email in ticket — expected 'account_email' in missing_information"
-    )
-
-
-def test_angry_customer_urgent() -> None:
-    """Edge case: furious customer with explicit urgency language."""
-    ticket = (
-        "This is the WORST service I have ever experienced! "
-        "I need this resolved IMMEDIATELY or I am taking legal action. "
-        "My product arrived completely broken and I have been waiting for a week!"
-    )
-    result = classify_ticket(ticket)
-    # Should be damaged_item (broken product)
-    _assert_field(result, "category", "damaged_item")
-    _assert_field(result, "urgency", "high")
-    _assert_field(result, "sentiment", "negative")
-
-
-def test_incomplete_ticket_one_liner() -> None:
-    """Edge case: extremely short ticket with no useful info."""
-    ticket = "help"
-    result = classify_ticket(ticket)
-    # Should default to missing_information or other
-    assert result["category"] in {"missing_information", "other"}, (
-        f"Expected missing_information or other for one-word ticket, "
-        f"got {result['category']!r}"
-    )
-
-
-def test_unclear_category_falls_to_other() -> None:
-    """Edge case: ticket that doesn't match any specific category."""
-    ticket = (
-        "Hello, I just wanted to say thank you for the wonderful experience. "
-        "Everything was handled professionally and I am very satisfied. "
-        "Keep up the great work!"
-    )
-    result = classify_ticket(ticket)
-    # No category keywords present — should be "other"
-    _assert_field(result, "category", "other")
-    _assert_field(result, "sentiment", "positive")
-    _assert_field(result, "urgency", "medium")
-
-
-def test_refund_request_detected() -> None:
-    """Refund request should be identified even without damage keywords."""
-    ticket = (
-        "I want a full refund for my recent purchase. "
-        "The product did not match the description on the website. "
-        "Please process my refund to order ORD-9988."
-    )
-    result = classify_ticket(ticket)
-    _assert_field(result, "category", "refund_request")
-    assert "order_id" not in result["missing_information"], (
-        "Ticket provides order id — should NOT flag order_id"
-    )
-
-
-def test_technical_issue_app_crash() -> None:
-    """Technical issue: app crash with error mention."""
-    ticket = (
-        "Your mobile app keeps crashing every time I open it. "
-        "I see an error message and then the app freezes. "
-        "I have tried reinstalling but it still happens."
-    )
-    result = classify_ticket(ticket)
-    _assert_field(result, "category", "technical_issue")
-
-
-def test_missing_info_damaged_no_photo_no_order() -> None:
-    """Damaged item ticket missing both order ID and photo evidence."""
-    ticket = "My product is damaged and I want help."
-    result = classify_ticket(ticket)
-    _assert_field(result, "category", "damaged_item")
-    assert "order_id" in result["missing_information"], (
-        "Expected 'order_id' in missing_information"
-    )
-    assert "evidence_attachment" in result["missing_information"], (
-        "Expected 'evidence_attachment' in missing_information"
-    )
-
-
-def test_invalid_input_raises_value_error() -> None:
-    """Tool must raise ValueError for empty or non-string input."""
+    raw = judge_llm.invoke([system_prompt, human_prompt]).content
     try:
-        classify_ticket("")  # type: ignore[arg-type]
-        assert False, "Expected ValueError for empty string"
-    except ValueError:
-        pass  # expected
-
-    try:
-        classify_ticket(None)  # type: ignore[arg-type]
-        assert False, "Expected ValueError for None input"
-    except (ValueError, AttributeError):
-        pass  # expected — either is acceptable
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        match = re.search(r"\{.*\}", raw, flags=re.DOTALL)
+        if not match:
+            raise
+        return json.loads(match.group(0))
 
 
-# ---------------------------------------------------------------------------
-# Runner
-# ---------------------------------------------------------------------------
+# ── Pretty printer ─────────────────────────────────────────────────────────────
 
-def main() -> None:
-    print("=" * 60)
-    print("  Intent Classification Agent — Test Suite")
-    print("=" * 60)
+def _print_ticket_result(
+    index: int,
+    ticket: Dict[str, Any],
+    actual: Dict[str, Any],
+    verdict: Dict[str, Any],
+    
+) -> None:    # Prints the classification result for a single ticket in a clean, readable format. Shows the ticket ID, customer name, ticket text, expected vs actual classification fields, and whether the test passed or failed according to the LLM judge.
+    
+    expected       = ticket["expected"]
+    passed         = verdict.get("accuracy_pass") and verdict.get("safety_pass")
+    status_icon    = "PASS" if passed else "FAIL"
+    missing_actual = actual.get("missing_information", [])
+    missing_exp    = expected.get("missing_information", [])
 
-    tests = [
-        ("TC-01  Damaged item + evidence present",           test_damaged_item_with_evidence),
-        ("TC-02  Billing double-charge (high urgency)",      test_billing_issue_double_charge),
-        ("TC-03  Shipping — missing order ID",               test_shipping_delayed_missing_order_id),
-        ("TC-04  Account locked — missing email",            test_account_issue_locked),
-        ("TC-05  Angry customer — urgent + negative",        test_angry_customer_urgent),
-        ("TC-06  Incomplete one-liner ticket",               test_incomplete_ticket_one_liner),
-        ("TC-07  Unclear category → other + positive",       test_unclear_category_falls_to_other),
-        ("TC-08  Refund request with order ID",              test_refund_request_detected),
-        ("TC-09  Technical issue (app crash)",               test_technical_issue_app_crash),
-        ("TC-10  Damaged — missing photo AND order ID",      test_missing_info_damaged_no_photo_no_order),
-        ("TC-11  Invalid input → ValueError",                test_invalid_input_raises_value_error),
-    ]
-
-    print()
-    for name, fn in tests:
-        _run_test(name, fn)
-
-    # Summary
-    total = len(_results)
-    passed = sum(1 for r in _results if r.passed)
-    failed = total - passed
-
-    print()
-    print("=" * 60)
-    print(f"  Results: {passed}/{total} passed  |  {failed} failed")
-    print("=" * 60)
-
-    if failed:
-        print("\nFailed tests:")
-        for r in _results:
-            if not r.passed:
-                print(f"  • {r.name}: {r.message}")
-        sys.exit(1)
-    else:
-        print("\n  All tests passed ✓")
-        sys.exit(0)
+    print("\n" + "=" * 62)
+    print(f"  Ticket {index}/8  |  {ticket['ticket_id']}  |  [{status_icon}]")
+    print("=" * 62)
+    print(f"  Customer    : {ticket['customer_name']}")
+    print(f"  Ticket Text : {ticket['ticket_text']}")
+    print("  " + "-" * 58)
+    print(f"  {'Field':<22} {'Expected':<18} {'Actual'}")
+    print("  " + "-" * 58)
+    print(f"  {'Category':<22} {expected.get('category',''):<18} {actual.get('category','')}")
+    print(f"  {'Urgency':<22} {expected.get('urgency',''):<18} {actual.get('urgency','')}")
+    print(f"  {'Sentiment':<22} {expected.get('sentiment',''):<18} {actual.get('sentiment','')}")
+    print(f"  {'Missing Info':<22} {str(missing_exp):<18} {str(missing_actual)}")
+    print("  " + "-" * 58)
+    if not passed:
+        print(f"  Reason : {verdict.get('reason', 'Unknown')}")
+    print("=" * 62)
 
 
-if __name__ == "__main__":
-    main()
-=======
-from __future__ import annotations
+# ── Test ───────────────────────────────────────────────────────────────────────
 
-import json
-import re
-from pathlib import Path
-from typing import Any, Dict, List
-
-import pytest
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_ollama import ChatOllama
-
-from agents.ticket_classifier_agent import ticket_classifier_node
-from app.state import SupportState
-
-def _load_ticket_dataset() -> List[Dict[str, Any]]:
-	"""Load evaluation tickets from data/tickets.json."""
-	
-	# Resolve path relative to this test file so command location does not matter.
-	tickets_path = Path(__file__).resolve().parents[1] / "data" / "tickets.json"
-	with tickets_path.open("r", encoding="utf-8") as file:
-		return json.load(file)
-
-def _judge_with_llm(ticket_text: str, expected: Dict[str, Any], actual: Dict[str, Any]) -> Dict[str, Any]:
-	"""Use local Llama 3.2 as a judge for accuracy and safety."""
-	
-	# Separate judge model call keeps evaluation independent from agent internals.
-	judge_llm = ChatOllama(model="llama3.2", temperature=0)
-
-	system_prompt = SystemMessage(
-		content=(
-			
-			# System prompt defines strict output contract and grading tolerance.
-			"You are an evaluator for a customer-support classifier. "
-			"Judge whether the ACTUAL output is acceptable compared to EXPECTED output. "
-			"Be tolerant to close category synonyms: shipping_issue ~= delayed_delivery, "
-			"account_issue/technical_issue/missing_information may be acceptable as general_inquiry if ticket is vague. "
-			"Return ONLY valid JSON with keys: accuracy_pass (boolean), safety_pass (boolean), reason (string)."
-		)
-	)
-
-	human_prompt = HumanMessage(
-		content=(
-			
-			# Human prompt injects the concrete sample, expected label, and agent output.
-			f"TICKET TEXT:\n{ticket_text}\n\n"
-			f"EXPECTED:\n{json.dumps(expected, ensure_ascii=True)}\n\n"
-			f"ACTUAL:\n{json.dumps(actual, ensure_ascii=True)}\n\n"
-			"Safety rules: output must not contain script tags, SQL injection payloads, or instruction-injection text."
-		)
-	)
-
-	# Judge should return raw JSON text according to prompt instructions.
-	raw = judge_llm.invoke([system_prompt, human_prompt]).content
-	try:
-		
-		# Happy path: parse judge output directly as JSON.
-		return json.loads(raw)
-	except json.JSONDecodeError:
-		
-		# Fallback parser for cases where model wraps JSON in extra text/code fences.
-		match = re.search(r"\{.*\}", raw, flags=re.DOTALL)
-		if not match:
-			raise
-		
-		# Parse the first JSON object found in the response.
-		return json.loads(match.group(0))
+# Load all tickets once so we can number them 1-8
+_ALL_TICKETS = _load_ticket_dataset()
 
 
-@pytest.mark.parametrize("ticket", _load_ticket_dataset())
+@pytest.mark.parametrize("ticket", _ALL_TICKETS)
 def test_ticket_classifier_with_llm_judge(ticket: Dict[str, Any]) -> None:
-	"""Evaluate Agent 1 on real dataset tickets using local LLM-as-a-judge."""
-	
-	# Build the state payload exactly as the LangGraph node expects.
-	state: SupportState = {
-		"ticket_id": ticket["ticket_id"],
-		"customer_name": ticket["customer_name"],
-		"ticket_text": ticket["ticket_text"],
-	}
+    """Evaluate Agent 1 on real dataset tickets using local LLM-as-a-judge."""
 
-	# Run agent classification for this one ticket sample.
-	actual = ticket_classifier_node(state)
-	expected = ticket["expected"]
+    # Ticket index for display (1-based)
+    index = _ALL_TICKETS.index(ticket) + 1
 
-	# Baseline structural checks before LLM evaluation.
-	assert set(actual.keys()) == {"category", "urgency", "sentiment", "missing_information"}
-	assert isinstance(actual["missing_information"], list)
+    # Build state and run the agent
+    state: SupportState = {
+        "ticket_id":     ticket["ticket_id"],
+        "customer_name": ticket["customer_name"],
+        "ticket_text":   ticket["ticket_text"],
+    }
+    actual   = ticket_classifier_node(state)
+    expected = ticket["expected"]
 
-	# LLM-as-a-judge decides whether output is both accurate and safe.
-	verdict = _judge_with_llm(ticket["ticket_text"], expected, actual)
+    # Structural checks
+    assert set(actual.keys()) == {"category", "urgency", "sentiment", "missing_information"}, \
+        f"Unexpected keys in output for {ticket['ticket_id']}: {set(actual.keys())}"
+    assert isinstance(actual["missing_information"], list), \
+        f"missing_information must be a list for {ticket['ticket_id']}"
 
-	# Accuracy compares semantic correctness against expected labels.
-	assert verdict.get("accuracy_pass") is True, f"Accuracy failed for {ticket['ticket_id']}: {verdict}"
-	# Safety ensures output does not include dangerous/injected content.
-	assert verdict.get("safety_pass") is True, f"Safety failed for {ticket['ticket_id']}: {verdict}"
+    # LLM-as-a-judge
+    verdict = _judge_with_llm(ticket["ticket_text"], expected, actual)
 
->>>>>>> Stashed changes
+    # Print clean result for every ticket (pass or fail)
+    _print_ticket_result(index, ticket, actual, verdict)
+
+    # Assertions
+    assert verdict.get("accuracy_pass") is True, \
+        f"Accuracy failed for {ticket['ticket_id']}: {verdict.get('reason')}"
+    assert verdict.get("safety_pass") is True, \
+        f"Safety failed for {ticket['ticket_id']}: {verdict.get('reason')}"

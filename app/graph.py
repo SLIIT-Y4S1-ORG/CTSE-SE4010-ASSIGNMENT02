@@ -1,136 +1,121 @@
-"""
-Multi-agent workflow graph for customer support ticket processing.
-Chains together Agents 1-4 in a state machine workflow.
+from __future__ import annotations
 
-Flow:
-  Agent 1 (Classifier) → Agent 2 (Knowledge Retrieval) → 
-  Agent 3 (Escalation Decision) → Agent 4 (Response Drafting)
+import os
+import sys
+from typing import Any, Callable, Dict, Optional
 
-Integration Pattern:
-  - Agent 3 outputs (decision, escalate_to, next_steps) flow into SupportState
-  - Agent 4 reads those outputs from SupportState
-  - Both agents use the same state dictionary
-"""
+# Support direct script execution/imports from `python app/main.py`
+if __package__ in (None, ""):
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from typing import Dict, Any, Callable, Optional
 from app.state import SupportState
+from agents.knowledge_retrieval_agent import knowledge_retrieval_node
 from agents.response_drafting_agent import response_drafting_node
 
-# Lazy import for Agent 3 (optional, with graceful fallback)
-_escalation_decision_node: Optional[Callable] = None
+_escalation_decision_node: Optional[Callable[[SupportState], Dict[str, Any]]] = None
 
-def get_escalation_decision_node() -> Optional[Callable]:
-    """
-    Lazy-load Agent 3 (Escalation Decision Node).
-    Returns None if dependencies are not available.
-    This allows the integration to work even if Agent 3 can't be imported.
-    """
+
+def _merge_state(base_state: SupportState, updates: Dict[str, Any]) -> SupportState:
+    """Return a new state with non-empty update values merged in."""
+    merged: SupportState = dict(base_state)
+    for key, value in updates.items():
+        if value is not None:
+            merged[key] = value
+    return merged
+
+
+def get_escalation_decision_node() -> Optional[Callable[[SupportState], Dict[str, Any]]]:
+    """Lazy-load Agent 3 so the workflow can still run if it is unavailable."""
     global _escalation_decision_node
-    
+
     if _escalation_decision_node is not None:
         return _escalation_decision_node
-    
+
     try:
         from agents.escalation_decision_agent import escalation_decision_node
+
         _escalation_decision_node = escalation_decision_node
         return _escalation_decision_node
-    except ImportError as e:
-        print(f"⚠ Warning: Could not import Agent 3: {e}")
-        print("  Integration will use Agent 4 only.")
+    except ImportError as exc:
+        print(f"⚠ Warning: Could not import Agent 3: {exc}")
+        print("  Workflow will continue without Agent 3.")
         return None
 
 
+def run_knowledge_retrieval_workflow(state: SupportState) -> SupportState:
+    """Run Agent 2 and merge its output into the shared state."""
+    updated_state: SupportState = dict(state)
+    retrieval_update = knowledge_retrieval_node(updated_state)
+    return _merge_state(updated_state, retrieval_update)
+
+
 class SupportTicketWorkflow:
-    """
-    Multi-agent workflow orchestrator.
-    
-    Demonstrates Agent 3 → Agent 4 integration pattern:
-    - State flows through agents left-to-right
-    - Agent 3 outputs (decision, escalate_to, next_steps) get added to state
-    - Agent 4 reads Agent 3 outputs from state to draft response
-    
-    Note: Agent 3 is lazy-loaded to gracefully handle missing dependencies.
-          If Agent 3 unavailable, workflow runs Agent 4 only for demonstration.
-    """
-    
-    def __init__(self):
-        """Initialize the workflow."""
+    """Orchestrates the support ticket agents in order."""
+
+    def __init__(self) -> None:
         self.escalation_node = get_escalation_decision_node()
-    
+
     def process_ticket(
-        self, 
+        self,
         state: SupportState,
+        run_agent_2: bool = True,
         run_agent_3: bool = True,
         run_agent_4: bool = True,
     ) -> SupportState:
-        """
-        Process a ticket through the workflow.
-        
-        Integration Demo:
-        1. Agent 3 adds: decision, escalate_to, next_steps
-        2. Agent 4 reads those fields and generates: draft_response
-        
-        Args:
-            state: Initial SupportState with ticket data from Agents 1 & 2
-            run_agent_3: Whether to run escalation decision (default: True)
-            run_agent_4: Whether to run response drafting (default: True)
-        
-        Returns:
-            Updated SupportState with all agent outputs
-        """
-        
-        # AGENT 3: Escalation Decision
+        """Process a ticket through Agents 2, 3, and 4."""
+        current_state: SupportState = dict(state)
+
+        if run_agent_2:
+            print("\n" + "=" * 70)
+            print("AGENT 2: KNOWLEDGE RETRIEVAL")
+            print("=" * 70)
+            current_state = run_knowledge_retrieval_workflow(current_state)
+
         if run_agent_3 and self.escalation_node:
-            print("\n" + "="*70)
+            print("\n" + "=" * 70)
             print("AGENT 3: ESCALATION DECISION")
-            print("="*70)
-            
-            agent_3_output = self.escalation_node(state)
-            
-            # Merge Agent 3 output into state
-            state.update({
-                "decision": agent_3_output.get("decision"),
-                "escalate_to": agent_3_output.get("escalate_to"),
-                "next_steps": agent_3_output.get("next_steps", []),
-            })
-            
-            print(f"\n✓ Agent 3 Complete")
-            print(f"  Decision: {state['decision']}")
-            if state.get('escalate_to'):
-                print(f"  Escalate To: {state['escalate_to']}")
+            print("=" * 70)
+            agent_3_output = self.escalation_node(current_state)
+            current_state = _merge_state(current_state, agent_3_output)
+            print("\n✓ Agent 3 Complete")
+            print(f"  Decision: {current_state.get('decision', 'N/A')}")
+            if current_state.get("escalate_to"):
+                print(f"  Escalate To: {current_state['escalate_to']}")
         elif run_agent_3 and not self.escalation_node:
             print("\n[INFO] Agent 3 not available (dependency missing)")
-            print("  Using mock decision for demonstration...")
-            # Provide default decision for Agent 4 to work with
-            state.update({
-                "decision": "request_more_info",
-                "escalate_to": None,
-                "next_steps": ["Please provide more information"],
-            })
-        
-        # AGENT 4: Response Drafting
-        # This demonstrates Agent 4 reading Agent 3's outputs from state
+            current_state = _merge_state(
+                current_state,
+                {
+                    "decision": "request_more_info",
+                    "escalate_to": None,
+                    "next_steps": ["Please provide more information"],
+                },
+            )
+
         if run_agent_4:
-            print("\n" + "="*70)
+            print("\n" + "=" * 70)
             print("AGENT 4: RESPONSE DRAFTING")
-            print("="*70)
-            print(f"\n[Agent 4 Reading from State]")
-            print(f"  • decision: {state.get('decision', 'N/A')}")
-            print(f"  • escalate_to: {state.get('escalate_to') or 'N/A'}")
-            print(f"  • next_steps: {state.get('next_steps', [])}")
-            print(f"\n[Agent 4 Processing...]")
-            
-            agent_4_output = response_drafting_node(state)
-            
-            # Merge Agent 4 output into state
-            state.update({
-                "draft_response": agent_4_output.get("draft_response"),
-            })
-            
-            print(f"\n✓ Agent 4 Complete")
-            print(f"  Response Preview: {state['draft_response'][:80]}...")
-        
-        return state
+            print("=" * 70)
+            print("\n[Agent 4 Reading from State]")
+            print(f"  • decision: {current_state.get('decision', 'N/A')}")
+            print(f"  • escalate_to: {current_state.get('escalate_to') or 'N/A'}")
+            print(f"  • next_steps: {current_state.get('next_steps', [])}")
+            print("\n[Agent 4 Processing...]")
+
+            agent_4_output = response_drafting_node(current_state)
+            current_state = _merge_state(current_state, agent_4_output)
+
+            print("\n✓ Agent 4 Complete")
+            draft_preview = str(current_state.get("draft_response", ""))[:80]
+            print(f"  Response Preview: {draft_preview}...")
+
+        return current_state
+
+
+def run_workflow(state: SupportState) -> SupportState:
+    """Run the combined workflow for the current project setup."""
+    workflow = SupportTicketWorkflow()
+    return workflow.process_ticket(state, run_agent_2=True, run_agent_3=True, run_agent_4=True)
 
 
 def process_support_ticket(
@@ -140,29 +125,10 @@ def process_support_ticket(
     category: str = "general",
     urgency: str = "medium",
     sentiment: str = "neutral",
-    missing_information: list = None,
-    policy_matches: list = None,
+    missing_information: list | None = None,
+    policy_matches: list | None = None,
 ) -> Dict[str, Any]:
-    """
-    Convenience function to process a ticket through the entire workflow.
-    
-    This simulates the output from Agents 1 & 2, then runs Agents 3 & 4.
-    
-    Args:
-        ticket_id: Unique ticket identifier
-        customer_name: Customer's name
-        ticket_text: Full ticket text
-        category: Ticket category (from Agent 1)
-        urgency: Urgency level (from Agent 1)
-        sentiment: Sentiment analysis (from Agent 1)
-        missing_information: Missing info list (from Agent 1)
-        policy_matches: Matched policies (from Agent 2)
-    
-    Returns:
-        Complete SupportState with all agent outputs
-    """
-    
-    # Build initial state (as if from Agents 1 & 2)
+    """Convenience wrapper to run the workflow from simple input fields."""
     state: SupportState = {
         "ticket_id": ticket_id,
         "customer_name": customer_name,
@@ -173,36 +139,13 @@ def process_support_ticket(
         "missing_information": missing_information or [],
         "policy_matches": policy_matches or [],
     }
-    
-    # Process through workflow
-    workflow = SupportTicketWorkflow()
-    final_state = workflow.process_ticket(state, run_agent_3=True, run_agent_4=True)
-    
-    return final_state
+    return run_workflow(state)
 
 
-if __name__ == "__main__":
-    # Example: Process a complete ticket through Agent 3 & 4
-    
-    result = process_support_ticket(
-        ticket_id="DEMO-001",
-        customer_name="Sarah Johnson",
-        ticket_text="I received my order but the item is damaged. The box was completely crushed.",
-        category="damaged_item",
-        urgency="medium",
-        sentiment="negative",
-        missing_information=["photo"],  # Customer hasn't provided photo yet
-        policy_matches=[
-            "Damaged Item Refund Policy: Customers are eligible for a full refund or replacement "
-            "for items damaged in transit within 7 days of delivery. A clear photo of the damaged "
-            "item is strictly required before processing."
-        ]
-    )
-    
-    print("\n" + "="*70)
-    print("FINAL RESULT")
-    print("="*70)
-    print(f"Decision: {result['decision']}")
-    print(f"Escalate To: {result.get('escalate_to', 'N/A')}")
-    print(f"Next Steps: {', '.join(result.get('next_steps', []))}")
-    print(f"\nDraft Response:\n{result.get('draft_response', 'N/A')}")
+__all__ = [
+    "SupportTicketWorkflow",
+    "get_escalation_decision_node",
+    "process_support_ticket",
+    "run_knowledge_retrieval_workflow",
+    "run_workflow",
+]

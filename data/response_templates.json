@@ -1,0 +1,6 @@
+{
+  "approval": "Hello {customer_name},\n\nThanks for contacting us about ticket {ticket_id}. Based on the policy review, {policy_summary}\n\nNext steps: {next_steps}\n\nThank you for your patience.",
+  "request_more_info": "Hello {customer_name},\n\nThanks for reaching out about ticket {ticket_id}. We need a little more information before we can continue. {policy_summary}\n\nPlease provide: {next_steps}\n\nThank you.",
+  "escalation": "Hello {customer_name},\n\nThank you for your message about ticket {ticket_id}. We have reviewed the available details and will continue handling this through the appropriate support channel. {policy_summary}\n\nNext steps: {next_steps}\n\nThank you for your patience.",
+  "rejection": "Hello {customer_name},\n\nThank you for contacting us about ticket {ticket_id}. Based on the current policy review, we cannot approve the request. {policy_summary}\n\nNext steps: {next_steps}\n\nThank you."
+}

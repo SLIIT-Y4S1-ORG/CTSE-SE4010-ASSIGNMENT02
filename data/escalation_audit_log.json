@@ -514,5 +514,29 @@
     "decision": "escalate_to_billing",
     "escalate_to": "billing",
     "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
+  },
+  {
+    "timestamp": "2026-04-28T21:30:15.810944",
+    "ticket_id": "FULL-INT-001",
+    "customer_name": "Sarah Chen",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-28T21:30:15.835786",
+    "ticket_id": "FULL-INT-002",
+    "customer_name": "Michael Johnson",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Unopened item return within 30-day window approved per policy."
+  },
+  {
+    "timestamp": "2026-04-28T21:30:15.855770",
+    "ticket_id": "FULL-INT-003",
+    "customer_name": "Patricia Lopez",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue requires Billing Team verification and immediate action."
   }
 ]

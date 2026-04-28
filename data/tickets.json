@@ -1,32 +1,90 @@
 [
   {
-    "ticket_id": "TCK-1001",
+    "ticket_id": "TCK-2001",
     "customer_name": "Alice Smith",
-    "text": "Hi, I received my coffee mug today but the handle is completely shattered. I have attached a picture of the broken mug and the box it came in. I would like my money back.",
-    "metadata": {
-      "order_id": "ORD-5592",
-      "has_attachments": true
-    },
-    "expected_behavior": "Easy win. Agent 1 classifies as 'damaged_item'. Agent 2 finds the refund rule. Agent 3 approves it because a photo is attached. Agent 4 drafts an approval."
+    "ticket_text": "Hi, I received my coffee mug today but the handle is completely shattered. I have attached a picture of the broken mug and the box it came in. My order number is ORD-5592. I would like my money back.",
+    "expected": {
+      "category": "damaged_item",
+      "urgency": "medium",
+      "sentiment": "neutral",
+      "missing_information": []
+    }
   },
   {
-    "ticket_id": "TCK-1002",
+    "ticket_id": "TCK-2002",
     "customer_name": "Bob Jones",
-    "text": "My new headphones arrived broken. The left ear doesn't work at all. Please send me a new one immediately.",
-    "metadata": {
-      "order_id": "ORD-8821",
-      "has_attachments": false
-    },
-    "expected_behavior": "Missing info case. Agent 1 notes it's a damaged item but missing a photo. Agent 3 decides to ask for more info. Agent 4 drafts an email asking Bob for a picture."
+    "ticket_text": "My new headphones arrived broken. The left ear doesn't work at all. Please send me a new one immediately.",
+    "expected": {
+      "category": "damaged_item",
+      "urgency": "high",
+      "sentiment": "neutral",
+      "missing_information": ["order_id", "evidence_attachment"]
+    }
   },
   {
-    "ticket_id": "TCK-1003",
+    "ticket_id": "TCK-2003",
     "customer_name": "Carol White",
-    "text": "I checked my bank statement and you guys charged me $45 TWICE for the same order! This is ridiculous, fix it now!",
-    "metadata": {
-      "order_id": "ORD-1104",
-      "has_attachments": false
-    },
-    "expected_behavior": "Escalation case. Agent 1 classifies as 'billing_issue'. Agent 2 fetches the double-charge policy. Agent 3 escalates to the Billing Team. Agent 4 writes an empathetic delay message."
+    "ticket_text": "I checked my bank statement and you guys charged me $45 TWICE for the same order! This is ridiculous, fix it now!",
+    "expected": {
+      "category": "billing_issue",
+      "urgency": "high",
+      "sentiment": "negative",
+      "missing_information": []
+    }
+  },
+  {
+    "ticket_id": "TCK-2004",
+    "customer_name": "Dan Brown",
+    "ticket_text": "My package hasn't arrived yet. It has been two weeks since I ordered. Where is my shipment?",
+    "expected": {
+      "category": "shipping_issue",
+      "urgency": "medium",
+      "sentiment": "neutral",
+      "missing_information": ["order_id"]
+    }
+  },
+  {
+    "ticket_id": "TCK-2005",
+    "customer_name": "Eva Green",
+    "ticket_text": "I cannot log in to my account. It says my account is locked. Please help me regain access.",
+    "expected": {
+      "category": "account_issue",
+      "urgency": "medium",
+      "sentiment": "neutral",
+      "missing_information": ["account_email"]
+    }
+  },
+  {
+    "ticket_id": "TCK-2006",
+    "customer_name": "Frank Lee",
+    "ticket_text": "Your mobile app keeps crashing every time I open it. I get an error message and the screen freezes. I have tried reinstalling but nothing works.",
+    "expected": {
+      "category": "technical_issue",
+      "urgency": "medium",
+      "sentiment": "neutral",
+      "missing_information": []
+    }
+  },
+  {
+    "ticket_id": "TCK-2007",
+    "customer_name": "Grace Kim",
+    "ticket_text": "I want a full refund for order ORD-9988. The product did not match the description at all.",
+    "expected": {
+      "category": "refund_request",
+      "urgency": "medium",
+      "sentiment": "neutral",
+      "missing_information": []
+    }
+  },
+  {
+    "ticket_id": "TCK-2008",
+    "customer_name": "Henry Nash",
+    "ticket_text": "Help",
+    "expected": {
+      "category": "missing_information",
+      "urgency": "medium",
+      "sentiment": "neutral",
+      "missing_information": ["order_id", "product_details"]
+    }
   }
 ]

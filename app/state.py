@@ -6,6 +6,7 @@ class SupportState(TypedDict, total=False):
     ticket_id: str
     customer_name: str
     ticket_text: str
+    user_input: str
     
     # Agent 1 (Classification) Fills These
     category: str

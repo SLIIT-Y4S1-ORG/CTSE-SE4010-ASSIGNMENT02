@@ -1,561 +1,176 @@
-<<<<<<< Updated upstream
-"""
-ticket_classifier_agent.py
----------------------------
-Agent 1 — Intent Classification Agent
+import json    # Used to parse the LLM's JSON response into a Python dictionary
+import re    # Used to clean up the LLM response (e.g. remove markdown code fences)
 
-Responsibilities:
-  • Classify the support ticket into a category
-  • Detect urgency level
-  • Identify sentiment
-  • Detect missing information
+from langchain_core.messages import HumanMessage, SystemMessage    # Two types of chat messages sent to the LLM
+from langchain_ollama import ChatOllama    # Connects to Ollama running locally on your machine
 
-Flow:
-  1. Read  : state["ticket_text"]
-  2. Call  : classify_ticket() tool (rule-based, no LLM)
-  3. Verify: LLM reviews the tool result and must confirm or override with
-             strict JSON output
-  4. Write : category | urgency | sentiment | missing_information
-             (also copies ticket_text → user_input)
-"""
+from app.state import SupportState    # The shared state object that holds all ticket information and classification results
+from tools.ticket_classifier_tool import read_ticket_from_file, log_classification_result    # Custom tools for reading tickets and logging results to terminal
 
-from __future__ import annotations
-
-import json
-import os
-import re
-import subprocess
-import sys
-import textwrap
-from typing import Any, Dict, List
-
-# Support direct script execution: `python agents/ticket_classifier_agent.py`
-if __package__ in (None, ""):
-    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage, SystemMessage
-
-from app.state import SupportState
-from tools.ticket_classifier_tool import classify_ticket
-from tracing.tracer import get_tracer
-
-# ---------------------------------------------------------------------------
-# Module-level tracer
-# ---------------------------------------------------------------------------
-tracer = get_tracer("ticket_classifier_agent")
-
-# ---------------------------------------------------------------------------
-# LLM setup — local Ollama with model fallback
-# ---------------------------------------------------------------------------
-DEFAULT_MODEL_CANDIDATES = ("llama3.2", "llama3.1", "llama3", "mistral")
+# ── LLM setup ─────────────────────────────────────────────────────────────────
+llm = ChatOllama(model="llama3.2", temperature=0)    # Using local Llama 3.2 with zero temperature for deterministic output
 
 
-def _model_candidates() -> List[str]:
-    """Build an ordered, de-duplicated model candidate list."""
-    configured = os.getenv("TICKET_CLASSIFIER_MODEL", "").strip()
-    candidates: List[str] = []
-    if configured:
-        candidates.append(configured)
-    candidates.extend(DEFAULT_MODEL_CANDIDATES)
+# ── System prompt ──────────────────────────────────────────────────────────────
+SYSTEM_PROMPT = SystemMessage(    
+    content=(
+        "You are an expert customer support ticket classifier.\n\n"
 
-    ordered_unique: List[str] = []
-    seen = set()
-    for model in candidates:
-        key = model.strip().lower()
-        if not key or key in seen:
-            continue
-        seen.add(key)
-        ordered_unique.append(model.strip())
-    return ordered_unique
+        "Analyze the given support ticket and return ONLY a valid JSON object with these exact keys:\n\n"
 
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "1. category — PRIORITY ORDER (use the FIRST rule that matches):\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "   → 'refund_request'      if customer explicitly says 'refund', 'money back', 'return my money'\n"
+        "   → 'billing_issue'       if customer mentions double charge, wrong charge, or billing error\n"
+        "   → 'damaged_item'        if customer says item arrived broken, shattered, or damaged\n"
+        "   → 'shipping_issue'      if customer asks where their package is or says it hasn't arrived\n"
+        "   → 'account_issue'       if customer can't log in, account is locked, or needs access help\n"
+        "   → 'technical_issue'     if customer reports an app crash, bug, or software error\n"
+        "   → 'missing_information' if the ticket is too vague to understand (e.g. just 'Help')\n"
+        "   → 'general_inquiry'     for anything else\n\n"
+        "   IMPORTANT: 'refund_request' takes priority. Even if an item was damaged or wrong,\n"
+        "   if the customer's primary ask is a refund, classify as 'refund_request'.\n\n"
 
-def _installed_ollama_models() -> List[str]:
-    """Return locally installed Ollama model names (best effort)."""
-    try:
-        completed = subprocess.run(
-            ["ollama", "list"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except OSError:
-        return []
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "2. urgency — Choose ONE from [low, medium, high]:\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "   → 'high'   ONLY if the customer uses explicitly urgent language such as: 'immediately',\n"
+        "               'right now', 'fix it now', 'urgent', 'ASAP', 'emergency'.\n"
+        "               Also 'high' for: confirmed double charge, broken device preventing all use,\n"
+        "               or account locked with active business impact.\n"
+        "   → 'medium' for most real issues — including app crashes, refund requests, shipping delays,\n"
+        "               wrong products, or complaints stated in a calm or factual tone.\n"
+        "               Use 'medium' when the issue is legitimate but no urgent language is present.\n"
+        "   → 'low'    only if the ticket is vague, speculative, or clearly non-urgent.\n\n"
+        "   IMPORTANT: Do NOT upgrade urgency based on the severity of the issue alone.\n"
+        "   Only upgrade to 'high' if the customer's OWN words express urgency.\n"
+        "   A factual complaint (e.g. 'the app crashes', 'I want a refund') is 'medium', not 'high'.\n\n"
 
-    if completed.returncode != 0 or not completed.stdout:
-        return []
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "3. sentiment — Choose ONE from [positive, neutral, negative]:\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "   → 'negative' ONLY if the customer uses emotionally charged language: 'frustrated',\n"
+        "               'angry', 'terrible', 'horrible', 'unacceptable', 'disgusted', 'worst'.\n"
+        "   → 'neutral'  if the tone is factual, matter-of-fact, or straightforwardly requesting help.\n"
+        "               This includes complaints stated calmly without emotional language.\n"
+        "               Examples: 'the app keeps crashing', 'I want a refund', 'the product was wrong'.\n"
+        "   → 'positive' if the customer is polite, thankful, or complimentary.\n\n"
+        "   IMPORTANT: Do NOT classify a ticket as 'negative' just because the situation is bad.\n"
+        "   Only use 'negative' when the customer's TONE is emotionally charged or hostile.\n"
+        "   A calm factual complaint is always 'neutral'.\n\n"
 
-    installed: List[str] = []
-    for line in completed.stdout.splitlines():
-        line = line.strip()
-        if not line or line.upper().startswith("NAME"):
-            continue
-        first_column = line.split()[0]
-        if first_column:
-            installed.append(first_column)
-    return installed
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "4. missing_information — List absent but required fields:\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "   Choose from: [order_id, account_email, product_details, evidence_attachment]\n\n"
+        "   → Add 'order_id'            ONLY if category is shipping_issue, billing_issue,\n"
+        "                                refund_request, or damaged_item.\n"
+        "                                Scan the ticket text for any order number pattern\n"
+        "                                (e.g. ORD-1234, order #5678, #ORD-9988).\n"
+        "                                If an order number IS found in the text, do NOT add 'order_id'.\n"
+        "                                ONLY add 'order_id' if no order number is found.\n"
+        "                                For all other categories (technical_issue, account_issue,\n"
+        "                                general_inquiry, etc.), NEVER add 'order_id'.\n\n"
+        "   → Add 'account_email'       ONLY if category is account_issue.\n"
+        "                                Scan the ticket text for any email address (e.g. user@example.com).\n"
+        "                                If an email IS found in the text, do NOT add 'account_email'.\n"
+        "                                ONLY add 'account_email' if no email address is found.\n"
+        "                                For all other categories, NEVER add 'account_email'.\n\n"
+        "   → Add 'product_details'     if the ticket is so vague that you cannot identify what product\n"
+        "                                or issue the customer is referring to (e.g. ticket just says 'Help').\n\n"
+        "   → Add 'evidence_attachment' if category is damaged_item and the customer does NOT mention\n"
+        "                                a photo, image, screenshot, or any attached proof.\n\n"
+        "   → Return []                 when all required information is clearly present in the ticket text.\n\n"
 
-
-def _is_missing_model_error(exc: Exception) -> bool:
-    """Detect Ollama model-not-found errors."""
-    message = str(exc).lower()
-    return "not found" in message and "404" in message
-
-
-def _invoke_with_model_fallback(messages: List[Any]) -> Dict[str, Any]:
-    """Try invoking ChatOllama using fallback model candidates."""
-    last_error: Exception | None = None
-    tried: List[str] = []
-    installed = _installed_ollama_models()
-
-    if installed:
-        candidate_pool = [m for m in _model_candidates() if m in installed]
-        if not candidate_pool:
-            candidate_pool = installed
-    else:
-        candidate_pool = _model_candidates()
-
-    for model_name in candidate_pool:
-        tried.append(model_name)
-        model = ChatOllama(model=model_name, temperature=0)
-        try:
-            response = model.invoke(messages)
-            return {"response": response, "model": model_name}
-        except Exception as exc:
-            last_error = exc
-            if _is_missing_model_error(exc):
-                tracer.warning(
-                    "LLM_MODEL_UNAVAILABLE",
-                    extra={"model": model_name, "reason": str(exc)},
-                )
-                continue
-            raise
-
-    tried_str = ", ".join(tried) if tried else "(none)"
-    raise RuntimeError(
-        f"No compatible Ollama model found. Tried: {tried_str}"
-    ) from last_error
-
-# ---------------------------------------------------------------------------
-# System prompt — persona-driven, output-constrained
-# ---------------------------------------------------------------------------
-SYSTEM_PROMPT = """\
-You are an expert Customer Support Triage Analyst.
-
-Your ONLY job is to validate or correct a preliminary classification that was
-produced by a deterministic rule-based tool.  You must NOT invent information.
-
-You will receive:
-  - The original ticket text
-  - A JSON classification from the rule-based tool
-
-Your task:
-  1. Check whether the category, urgency, and sentiment are correct.
-  2. Check whether the missing_information list is accurate.
-  3. If everything is correct, return the classification unchanged.
-  4. If something is wrong, correct ONLY the incorrect field(s).
-
-STRICT OUTPUT RULES:
-  - Respond with ONLY a valid JSON object — no prose, no markdown fences.
-  - Use exactly these keys:
-      "category", "urgency", "sentiment", "missing_information"
-  - Allowed values:
-      category  : damaged_item | refund_request | billing_issue |
-                  shipping_issue | technical_issue | account_issue |
-                  missing_information | other
-      urgency   : low | medium | high
-      sentiment : positive | neutral | negative
-      missing_information : JSON array of strings (may be empty [])
-  - Do NOT add any extra keys or commentary.
-  - If unsure, keep the tool's value unchanged.
-"""
-
-
-# ---------------------------------------------------------------------------
-# Helper
-# ---------------------------------------------------------------------------
-
-def _extract_json(text: str) -> Dict[str, Any]:
-    """
-    Robustly parse JSON from an LLM response that may contain markdown fences
-    or surrounding prose.
-
-    Raises
-    ------
-    ValueError
-        If no valid JSON object can be extracted.
-    """
-    # Strip markdown fences
-    cleaned = re.sub(r"```(?:json)?", "", text).strip()
-    # Try direct parse first
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError:
-        pass
-    # Find the first {...} block
-    match = re.search(r"\{.*\}", cleaned, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group())
-        except json.JSONDecodeError:
-            pass
-    raise ValueError(f"Could not extract JSON from LLM output:\n{text}")
-
-
-def _validate_classification(data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Ensure required keys are present and values are within allowed sets.
-    Falls back to sensible defaults for invalid values rather than crashing.
-    """
-    valid_categories = {
-        "damaged_item", "refund_request", "billing_issue", "shipping_issue",
-        "technical_issue", "account_issue", "missing_information", "other",
-    }
-    valid_urgency = {"low", "medium", "high"}
-    valid_sentiment = {"positive", "neutral", "negative"}
-
-    category = data.get("category", "other")
-    urgency = data.get("urgency", "medium")
-    sentiment = data.get("sentiment", "neutral")
-    missing = data.get("missing_information", [])
-
-    return {
-        "category": category if category in valid_categories else "other",
-        "urgency": urgency if urgency in valid_urgency else "medium",
-        "sentiment": sentiment if sentiment in valid_sentiment else "neutral",
-        "missing_information": missing if isinstance(missing, list) else [],
-    }
-
-
-def _print_section(title: str) -> None:
-    """Render a compact section header."""
-    print(f"\n{'=' * 72}")
-    print(title)
-    print(f"{'=' * 72}")
-
-
-def _print_kv(label: str, value: Any) -> None:
-    """Render key-value output with aligned labels."""
-    print(f"  {label:<20}: {value}")
-
-
-def _print_state_card(result: Dict[str, Any]) -> None:
-    """Render a concise final state card for interactive runs."""
-    card_lines = [
-        f"Category            : {result.get('category')}",
-        f"Urgency             : {result.get('urgency')}",
-        f"Sentiment           : {result.get('sentiment')}",
-        f"Missing Information : {result.get('missing_information')}",
-    ]
-    width = max(len(line) for line in card_lines) + 4
-    print(f"\n+{'-' * width}+")
-    for line in card_lines:
-        print(f"| {line.ljust(width - 3)}|")
-    print(f"+{'-' * width}+")
-
-
-# ---------------------------------------------------------------------------
-# Main agent node
-# ---------------------------------------------------------------------------
-
-def ticket_classifier_node(state: SupportState) -> Dict[str, Any]:
-    """
-    LangGraph node for the Intent Classification Agent.
-
-    Reads
-    -----
-    state["ticket_text"]
-
-    Writes
-    ------
-    user_input, category, urgency, sentiment, missing_information
-
-    Parameters
-    ----------
-    state : SupportState
-        The shared graph state dict.
-
-    Returns
-    -------
-    dict
-        Partial state update consumed by LangGraph.
-    """
-    ticket_id = state.get("ticket_id", "UNKNOWN")
-    ticket_text = state.get("ticket_text", "")
-
-    # ------------------------------------------------------------------
-    # Step 0 — Log agent input
-    # ------------------------------------------------------------------
-    tracer.info(
-        "AGENT_INPUT",
-        extra={
-            "ticket_id": ticket_id,
-            "ticket_text": ticket_text,
-        },
+        "Return ONLY the raw JSON object. No explanation, no markdown, no extra text."
     )
-    _print_section(f"Agent 1 - Intent Classification (Ticket: {ticket_id})")
-    _print_kv("Input text", textwrap.shorten(ticket_text, width=120, placeholder="..."))
-
-    # ------------------------------------------------------------------
-    # Step 1 — Call the custom rule-based tool
-    # ------------------------------------------------------------------
-    print("[Step 1/3] Running rule-based classifier tool")
-    tracer.info("TOOL_CALL", extra={"tool": "classify_ticket", "input": ticket_text})
-
-    try:
-        tool_result = classify_ticket(ticket_text)
-    except (ValueError, Exception) as exc:
-        tracer.error("TOOL_ERROR", extra={"error": str(exc)})
-        # Graceful degradation — fill with safe defaults
-        tool_result = {
-            "category": "other",
-            "urgency": "medium",
-            "sentiment": "neutral",
-            "missing_information": [],
-            "confidence": "low",
-        }
-
-    tracer.info("TOOL_OUTPUT", extra={"tool_result": tool_result})
-    _print_kv("Tool result", tool_result)
-
-    # ------------------------------------------------------------------
-    # Step 2 — LLM validation / correction pass
-    # ------------------------------------------------------------------
-    print("[Step 2/3] Validating with local LLM (Ollama)")
-
-    human_message = HumanMessage(
-        content=(
-            f"Ticket Text:\n\"\"\"\n{ticket_text}\n\"\"\"\n\n"
-            f"Rule-Based Tool Classification (JSON):\n"
-            f"{json.dumps(tool_result, indent=2)}\n\n"
-            "Validate and return the final classification as a strict JSON object."
-        )
-    )
-
-    try:
-        invocation = _invoke_with_model_fallback(
-            [SystemMessage(content=SYSTEM_PROMPT), human_message]
-        )
-        llm_response = invocation["response"]
-        final_data = _extract_json(llm_response.content)
-        tracer.info(
-            "LLM_OUTPUT",
-            extra={"model": invocation["model"], "raw": llm_response.content},
-        )
-    except Exception as exc:
-        # LLM failure — fall back to tool output
-        tracer.warning(
-            "LLM_FALLBACK",
-            extra={"reason": str(exc), "fallback": "tool_result"},
-        )
-        print(f"  [Warning] LLM validation failed ({exc}). Using tool result.")
-        final_data = tool_result
-
-    # ------------------------------------------------------------------
-    # Step 3 — Validate and sanitise the final output
-    # ------------------------------------------------------------------
-    validated = _validate_classification(final_data)
-
-    # ------------------------------------------------------------------
-    # Step 4 — Build state update
-    # ------------------------------------------------------------------
-    state_update: Dict[str, Any] = {
-        # user_input is a copy of ticket_text (as per spec)
-        "user_input": ticket_text,
-        "category": validated["category"],
-        "urgency": validated["urgency"],
-        "sentiment": validated["sentiment"],
-        "missing_information": validated["missing_information"],
-    }
-
-    # ------------------------------------------------------------------
-    # Step 5 — Log final classification and state update
-    # ------------------------------------------------------------------
-    tracer.info(
-        "FINAL_CLASSIFICATION",
-        extra={
-            "ticket_id": ticket_id,
-            "classification": validated,
-            "state_keys_written": list(state_update.keys()),
-        },
-    )
-
-    print("[Step 3/3] Final classification")
-    _print_kv("Category", validated["category"])
-    _print_kv("Urgency", validated["urgency"])
-    _print_kv("Sentiment", validated["sentiment"])
-    _print_kv("Missing information", validated["missing_information"])
-    _print_kv("State keys written", list(state_update.keys()))
-
-    return state_update
-
-
-# Backward-compatible alias (in case other modules import under this name)
-classify_ticket_node = ticket_classifier_node
-
-
-def _run_interactive() -> int:
-    """Interactive command-line runner for manual Agent 1 checks."""
-    _print_section("Intent Classification Agent")
-    print("Describe your issue and we'll route it to the right support team.")
-    user_ticket = input("Enter your support issue:").strip()
-
-    if not user_ticket:
-        print("No ticket text provided. Exiting.")
-        return 1
-
-    state: SupportState = {
-        "ticket_id": "MANUAL-001",
-        "customer_name": "Manual User",
-        "ticket_text": user_ticket,
-    }
-
-    result = ticket_classifier_node(state)
-    _print_state_card(result)
-    print("\nJSON output:")
-    print(json.dumps(result, indent=2))
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(_run_interactive())
-=======
-from __future__ import annotations
-
-from pathlib import Path
-import sys
-from typing import Any, Dict, List
-
-# Add project root to path for direct execution
-_PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(_PROJECT_ROOT) not in sys.path:
-	sys.path.insert(0, str(_PROJECT_ROOT))
-
-from app.state import SupportState
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_ollama import ChatOllama
-from tools.ticket_classifier_tool import classify_ticket
-from tracing.tracer import (
-	log_agent_input,
-	log_final_output,
-	log_tool_call,
-	log_tool_output,
 )
 
 
-llm = ChatOllama(model="llama3.2", temperature=0)
+def _build_human_prompt(customer_name: str, ticket_text: str) -> HumanMessage:    # Create the human message prompt with the customer's name and ticket text to send to the LLM
+    
+    return HumanMessage(
+        content=(
+            f"Customer Name: {customer_name}\n"
+            f"Ticket Text: {ticket_text}\n\n"
+            "Classify this ticket now."
+        )
+    )
 
 
-def _extract_value_from_text(text: str, key: str, allowed: List[str]) -> str:
-	"""Lightweight parser for optional LLM refinements from plain text."""
-	lowered = text.lower()
-	for value in allowed:
-		if f"{key}: {value}" in lowered:
-			return value
-	return ""
+def _parse_llm_output(raw: str) -> dict:    # Clean the raw LLM output to extract the JSON string, then parse it into a Python dictionary
+    
+    clean = raw.strip()
+    clean = re.sub(r"^```(?:json)?", "", clean).strip()
+    clean = re.sub(r"```$", "", clean).strip()
+
+    try:
+        return json.loads(clean)
+    except json.JSONDecodeError:
+        match = re.search(r"\{.*\}", clean, flags=re.DOTALL)
+        if match:
+            return json.loads(match.group(0))
+        raise ValueError(f"Could not parse LLM output as JSON:\n{raw}")
 
 
-def _extract_missing_info_from_text(text: str) -> List[str]:
-	lowered = text.lower()
-	detected: List[str] = []
-	for field in ["order_id", "evidence_attachment", "product_details", "account_email"]:
-		if field in lowered:
-			detected.append(field)
-	return detected
+def ticket_classifier_node(state: SupportState) -> dict:    # The main function for this agent node. It takes the shared SupportState as input and returns a dictionary with the classification results that this agent is responsible for.
 
+    # ── Step 1: Read inputs from state ────────────────────────────────────────
+    ticket_id     = state.get("ticket_id", "UNKNOWN")
+    customer_name = state.get("customer_name", "Unknown Customer")
+    ticket_text   = state.get("ticket_text", "")
 
-def ticket_classifier_node(state: SupportState) -> Dict[str, Any]:
-	"""Agent 1: classify ticket intent, urgency, sentiment, and missing information."""
-	agent_name = "Agent 1 - Intent Classification"
-	ticket_text = state.get("ticket_text", "")
+    print(f"\n[Agent] Classification started")
 
-	log_agent_input(agent_name, ticket_text)
+    # ── Step 2: Use custom tool — read ticket from local file ─────────────────
+    file_ticket = read_ticket_from_file(ticket_id)
+    if file_ticket:
+        print(f"[Tool] Ticket {ticket_id} found in local file.")
+        print(f"[Tool] Ticket confirmed in local dataset.")
+    else:
+        print(f"[Tool] Ticket {ticket_id} NOT found in local file.")
+        print(f"[Tool] Ticket not in dataset. Using state input directly.")
 
-	if not ticket_text.strip():
-		result = {
-			"user_input": ticket_text,
-			"category": "missing_information",
-			"urgency": "low",
-			"sentiment": "neutral",
-			"missing_information": ["order_id", "product_details"],
-		}
-		log_final_output(agent_name, result)
-		return result
+    # ── Step 3: Call LLM for classification ───────────────────────────────────
+    print(f"[Agent] Sending to Llama 3.2 for classification...")
 
-	# 1) Rule-based classification tool call
-	log_tool_call(agent_name, "classify_ticket", {"ticket_text": ticket_text})
-	tool_result = classify_ticket(ticket_text)
-	log_tool_output(agent_name, "classify_ticket", tool_result)
+    human_prompt = _build_human_prompt(customer_name, ticket_text)
+    response     = llm.invoke([SYSTEM_PROMPT, human_prompt])
+    raw_output   = response.content
 
-	# 2) LLM confirmation/refinement in human-readable structured style
-	system_prompt = SystemMessage(
-		content="""
-You are an Intent Classification Assistant for customer support triage.
+    # ── Step 4: Parse the LLM response ────────────────────────────────────────
+    classification = _parse_llm_output(raw_output)
 
-You receive a draft ticket classification from a rules tool.
-Keep the same structure and only adjust values if clearly more accurate.
+    # Ensure missing_information is always a list
+    if not isinstance(classification.get("missing_information"), list):
+        classification["missing_information"] = []
 
-Output format (plain text, not JSON):
-Category: <one value>
-Urgency: <low|medium|high>
-Sentiment: <positive|neutral|negative>
-Missing Information: <comma-separated field names or none>
+    # ── Step 5: Use custom tool — log result to terminal ──────────────────────
+    log_classification_result(ticket_id, customer_name, classification)
 
-Allowed categories:
-damaged_item, refund_request, billing_issue, shipping_issue,
-technical_issue, account_issue, missing_information, other
-"""
-	)
+    # ── Step 6: Return only the fields this agent owns ────────────────────────
+    return {
+        "category":            classification.get("category"),
+        "urgency":             classification.get("urgency"),
+        "sentiment":           classification.get("sentiment"),
+        "missing_information": classification.get("missing_information", []),
+    }
 
-	human_prompt = HumanMessage(
-		content=(
-			f"Ticket Text:\n{ticket_text}\n\n"
-			"Draft Classification from Tool:\n"
-			f"Category: {tool_result.get('category', 'other')}\n"
-			f"Urgency: {tool_result.get('urgency', 'medium')}\n"
-			f"Sentiment: {tool_result.get('sentiment', 'neutral')}\n"
-			"Missing Information: "
-			f"{', '.join(tool_result.get('missing_information', [])) or 'none'}"
-		)
-	)
+# ── Standalone run ─────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    print("\n" + "=" * 50)
+    print("    Agent 1: Intent Classification Agent")
+    print("=" * 50 + "\n")
 
-	ai_response = llm.invoke([system_prompt, human_prompt])
-	refined_text = str(ai_response.content)
+    ticket_id     = input("Enter Your Ticket ID       : ")
+    customer_name = input("Enter Your Name            : ")
+    ticket_text   = input("Enter Your Support Issue   : ")
 
-	refined_category = _extract_value_from_text(
-		refined_text,
-		"category",
-		[
-			"damaged_item",
-			"refund_request",
-			"billing_issue",
-			"shipping_issue",
-			"technical_issue",
-			"account_issue",
-			"missing_information",
-			"other",
-		],
-	)
-	refined_urgency = _extract_value_from_text(refined_text, "urgency", ["low", "medium", "high"])
-	refined_sentiment = _extract_value_from_text(
-		refined_text,
-		"sentiment",
-		["positive", "neutral", "negative"],
-	)
-	refined_missing = _extract_missing_info_from_text(refined_text)
+    state = {
+        "ticket_id":     ticket_id,
+        "customer_name": customer_name,
+        "ticket_text":   ticket_text,
+    }
 
-	final_result = {
-		"user_input": ticket_text,
-		"category": refined_category or tool_result.get("category", "other"),
-		"urgency": refined_urgency or tool_result.get("urgency", "medium"),
-		"sentiment": refined_sentiment or tool_result.get("sentiment", "neutral"),
-		"missing_information": refined_missing or tool_result.get("missing_information", []),
-	}
-
-	log_final_output(agent_name, final_result)
-	return final_result
-
-
-# Backward-compatible alias
-classifier_node = ticket_classifier_node
->>>>>>> Stashed changes
+    ticket_classifier_node(state)

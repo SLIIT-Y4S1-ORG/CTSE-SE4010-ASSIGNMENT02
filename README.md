@@ -28,7 +28,40 @@ This project implements a **multi-agent system** for automated customer support 
 The system consists of 4 sequential agents:
 
 ### Agent 1: Ticket Classifier
-*Coming soon...*
+
+The Intent Classification Agent is the first agent in the Customer Support Ticket Triage System. It receives a raw customer support ticket and analyzes it using a local LLM (Llama 3.2 via Ollama) to extract structured information needed by the rest of the pipeline.
+
+**Responsibilities**
+- Classify the ticket into a support category
+- Detect the urgency level of the issue
+- Identify the customer's sentiment
+- Flag any missing information required to resolve the ticket
+
+**Input** (from shared state)
+- `ticket_id` — unique identifier for the ticket
+- `customer_name` — name of the customer
+- `ticket_text` — the raw support message written by the customer
+
+**Output** (stored back into shared state)
+- `category` — type of issue: `damaged_item`, `billing_issue`, `shipping_issue`, `account_issue`, `technical_issue`, `refund_request`, `missing_information`, or `general_inquiry`
+- `urgency` — `low`, `medium`, or `high`
+- `sentiment` — `positive`, `neutral`, or `negative`
+- `missing_information` — list of absent but required fields such as `order_id`, `account_email`, `product_details`, or `evidence_attachment`
+
+**Files**
+- `agents/ticket_classifier_agent.py` — agent node logic, LLM call, and prompt
+- `tools/ticket_classifier_tool.py` — custom tool for reading the ticket dataset and logging results
+
+**How to Run**
+```bash
+python -m agents.ticket_classifier_agent
+```
+
+**How to Test**
+```bash
+python -m pytest tests/test_ticket_classifier.py -q -s
+```
+
 
 ### Agent 2: Knowledge Retrieval Agent
 *Coming soon...*

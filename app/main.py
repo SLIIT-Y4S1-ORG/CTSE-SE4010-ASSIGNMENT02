@@ -14,7 +14,7 @@ from app.state import SupportState
 
 
 def main() -> int:
-	"""Run the support workflow demo for the knowledge retrieval agent."""
+	"""Run the common support workflow demo."""
 	sample_state: SupportState = {
 		"ticket_id": "TCK-2001",
 		"customer_name": "Alice Smith",
@@ -29,7 +29,7 @@ def main() -> int:
 		"missing_information": [],
 	}
 
-	print("Starting knowledge retrieval workflow...\n")
+	print("Starting support ticket workflow...\n")
 	final_state: Dict[str, Any] = run_workflow(sample_state)
 
 	print("\nFinal state:")

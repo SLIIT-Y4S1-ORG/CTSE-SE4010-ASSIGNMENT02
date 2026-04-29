@@ -9,6 +9,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.state import SupportState
+from agents.ticket_classifier_agent import ticket_classifier_node
 from agents.knowledge_retrieval_agent import knowledge_retrieval_node
 from agents.response_drafting_agent import response_drafting_node
 
@@ -58,12 +59,26 @@ class SupportTicketWorkflow:
     def process_ticket(
         self,
         state: SupportState,
+        run_agent_1: bool = True,
         run_agent_2: bool = True,
         run_agent_3: bool = True,
         run_agent_4: bool = True,
     ) -> SupportState:
-        """Process a ticket through Agents 2, 3, and 4."""
+        """Process a ticket through Agents 1, 2, 3, and 4."""
         current_state: SupportState = dict(state)
+
+        if run_agent_1:
+            print("\n" + "=" * 70)
+            print("AGENT 1: INTENT CLASSIFICATION")
+            print("=" * 70)
+            agent_1_output = ticket_classifier_node(current_state)
+            current_state = _merge_state(current_state, agent_1_output)
+            print("\n✓ Agent 1 Complete")
+            print(f"  Category: {current_state.get('category', 'N/A')}")
+            print(f"  Urgency: {current_state.get('urgency', 'N/A')}")
+            print(f"  Sentiment: {current_state.get('sentiment', 'N/A')}")
+            missing = current_state.get("missing_information", [])
+            print(f"  Missing Information: {', '.join(missing) if missing else 'None'}")
 
         if run_agent_2:
             print("\n" + "=" * 70)
@@ -115,7 +130,7 @@ class SupportTicketWorkflow:
 def run_workflow(state: SupportState) -> SupportState:
     """Run the combined workflow for the current project setup."""
     workflow = SupportTicketWorkflow()
-    return workflow.process_ticket(state, run_agent_2=True, run_agent_3=True, run_agent_4=True)
+    return workflow.process_ticket(state, run_agent_1=True, run_agent_2=True, run_agent_3=True, run_agent_4=True)
 
 
 def process_support_ticket(

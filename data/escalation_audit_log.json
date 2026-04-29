@@ -94,5 +94,449 @@
     "decision": "escalate_to_human_support",
     "escalate_to": "human_support",
     "reason": "Customer flagged for potential fraud. Requires human review."
+  },
+  {
+    "timestamp": "2026-04-28T14:35:36.348367",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-28T14:35:36.375233",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-28T14:35:36.399286",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
+  },
+  {
+    "timestamp": "2026-04-28T14:46:18.802785",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-28T14:46:18.825806",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-28T14:46:18.849323",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
+  },
+  {
+    "timestamp": "2026-04-28T14:47:10.183361",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-28T14:47:10.204103",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-28T14:47:10.225725",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
+  },
+  {
+    "timestamp": "2026-04-28T14:50:51.910657",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-28T14:50:51.932989",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-28T14:50:51.957112",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
+  },
+  {
+    "timestamp": "2026-04-28T14:56:21.048022",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-28T14:56:21.065509",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-28T14:56:21.081961",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
+  },
+  {
+    "timestamp": "2026-04-28T14:58:01.319112",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-28T14:58:01.345887",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-28T14:58:01.373368",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
+  },
+  {
+    "timestamp": "2026-04-28T15:50:11.192040",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-28T15:50:11.270291",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-28T15:50:11.288554",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
+  },
+  {
+    "timestamp": "2026-04-28T16:00:57.880092",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-28T16:00:57.916872",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-28T16:00:57.935906",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
+  },
+  {
+    "timestamp": "2026-04-28T16:05:19.069479",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-28T16:05:19.080512",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy.",
+    "llm_validation": ""
+  },
+  {
+    "timestamp": "2026-04-28T16:05:19.099289",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-28T16:05:19.112768",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage.",
+    "llm_validation": ""
+  },
+  {
+    "timestamp": "2026-04-28T16:05:19.146750",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
+  },
+  {
+    "timestamp": "2026-04-28T16:05:19.161004",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]",
+    "llm_validation": ""
+  },
+  {
+    "timestamp": "2026-04-28T16:10:38.608562",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-28T16:10:38.626624",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage.",
+    "llm_validation": ""
+  },
+  {
+    "timestamp": "2026-04-28T16:10:38.656709",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-28T16:10:38.685152",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage.",
+    "llm_validation": ""
+  },
+  {
+    "timestamp": "2026-04-28T16:10:38.711536",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
+  },
+  {
+    "timestamp": "2026-04-28T16:10:38.734993",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]",
+    "llm_validation": ""
+  },
+  {
+    "timestamp": "2026-04-28T16:10:56.503028",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-28T16:10:56.523687",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy.",
+    "llm_validation": ""
+  },
+  {
+    "timestamp": "2026-04-28T16:10:56.547580",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-28T16:10:56.565936",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage.",
+    "llm_validation": ""
+  },
+  {
+    "timestamp": "2026-04-28T16:10:56.588849",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
+  },
+  {
+    "timestamp": "2026-04-28T16:10:56.607799",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]",
+    "llm_validation": ""
+  },
+  {
+    "timestamp": "2026-04-28T16:13:19.034150",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-28T16:13:19.051600",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage.",
+    "llm_validation": ""
+  },
+  {
+    "timestamp": "2026-04-28T16:13:19.072431",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-28T16:13:19.088849",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage.",
+    "llm_validation": ""
+  },
+  {
+    "timestamp": "2026-04-28T16:13:19.105010",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
+  },
+  {
+    "timestamp": "2026-04-28T16:13:19.117614",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]",
+    "llm_validation": ""
+  },
+  {
+    "timestamp": "2026-04-28T16:27:24.358985",
+    "ticket_id": "TCK-1001",
+    "customer_name": "Alice Smith",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-28T16:28:24.600087",
+    "ticket_id": "TCK-1002",
+    "customer_name": "Bob Jones",
+    "decision": "request_more_info",
+    "escalate_to": null,
+    "reason": "Refund possible for damaged items, but photo evidence is missing. Policy requires clear photo of damage."
+  },
+  {
+    "timestamp": "2026-04-28T16:29:21.649600",
+    "ticket_id": "TCK-1003",
+    "customer_name": "Carol White",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue from repeat complainant (5 tickets). Requires Billing Team verification and immediate action. [PRIORITY: Customer is a repeat complainant (5 previous tickets) - escalate with priority handling]"
+  },
+  {
+    "timestamp": "2026-04-28T21:30:15.810944",
+    "ticket_id": "FULL-INT-001",
+    "customer_name": "Sarah Chen",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-04-28T21:30:15.835786",
+    "ticket_id": "FULL-INT-002",
+    "customer_name": "Michael Johnson",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Unopened item return within 30-day window approved per policy."
+  },
+  {
+    "timestamp": "2026-04-28T21:30:15.855770",
+    "ticket_id": "FULL-INT-003",
+    "customer_name": "Patricia Lopez",
+    "decision": "escalate_to_billing",
+    "escalate_to": "billing",
+    "reason": "High-urgency billing issue requires Billing Team verification and immediate action."
   }
 ]

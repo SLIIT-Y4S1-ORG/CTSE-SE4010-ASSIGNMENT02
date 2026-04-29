@@ -1,16 +1,14 @@
-import json
-import re
+import json   # for parsing LLM output
+import re     # for cleaning LLM output (removing markdown code blocks)
+from langchain_core.messages import HumanMessage, SystemMessage  # for structured prompts
+from langchain_ollama import ChatOllama  # for LLM interaction
+from app.state import SupportState  # for shared state type
+from tools.ticket_classifier_tool import run_ticket_classification_flow # for standalone testing and logging
 
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_ollama import ChatOllama
-
-from app.state import SupportState
-from tools.ticket_classifier_tool import run_ticket_classification_flow
-
-# ── LLM setup ─────────────────────────────────────────────────────────────────
+# ── Initialize LLM model (Ollama Llama3.2) ──────────────────────────────────────────────────────────
 llm = ChatOllama(model="llama3.2", temperature=0)
 
-# ── System prompt ───────────────────────────────
+# ── System prompt (rules for ticket classification) ─────────────────────────────────────────────────
 SYSTEM_PROMPT = SystemMessage(
     content=(
         "You are an expert customer support ticket classifier.\n\n"
@@ -92,6 +90,7 @@ SYSTEM_PROMPT = SystemMessage(
     )
 )
 
+# ── Build user message for LLM ─────────────────────────────────────────────
 def _build_human_prompt(ticket_text: str) -> HumanMessage:
     return HumanMessage(
         content=(
@@ -100,29 +99,41 @@ def _build_human_prompt(ticket_text: str) -> HumanMessage:
         )
     )
 
+# ── Clean + parse LLM output into JSON safely ──────────────────────────────
 def _parse_llm_output(raw: str) -> dict:
     clean = raw.strip()
+
+    # remove markdown code blocks (```json) if present
     clean = re.sub(r"^```(?:json)?", "", clean).strip()
     clean = re.sub(r"```$", "", clean).strip()
 
     try:
         return json.loads(clean)
     except json.JSONDecodeError:
+        # fallback: extract JSON object from text
         match = re.search(r"\{.*\}", clean, flags=re.DOTALL)
         if match:
             return json.loads(match.group(0))
+        
+        # fail if nothing valid found
         raise ValueError(f"Could not parse LLM output:\n{raw}")
 
+# ── Main agent node (runs classification) ───────────────────────────────
 def ticket_classifier_node(state: SupportState) -> dict:
+    # extract ticket text from state
     ticket_text = state.get("ticket_text", "")
 
+    print("\n[Agent 1] Llama 3.2 | Status: Classification started")
+    # call LLM with system + user prompt
     response = llm.invoke([SYSTEM_PROMPT, _build_human_prompt(ticket_text)])
+    # parse LLM response into structured JSON
     classification = _parse_llm_output(response.content)
 
-    # ── Normalize ─────────────────────────────────────────────────────────────
+    # ── Ensure missing_information is always a list ─────────────────────────────────────────────────────────────
     if not isinstance(classification.get("missing_information"), list):
         classification["missing_information"] = []
 
+    # return structured output
     return {
         "category": classification.get("category"),
         "urgency": classification.get("urgency"),
@@ -130,6 +141,6 @@ def ticket_classifier_node(state: SupportState) -> dict:
         "missing_information": classification.get("missing_information", []),
     }
 
-# ── Standalone run ─────────────────────────────────────────────────────────────
+# ── Run system standalone (for testing) ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     run_ticket_classification_flow(ticket_classifier_node)

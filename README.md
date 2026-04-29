@@ -27,7 +27,7 @@ This project implements a **multi-agent system** for automated customer support 
 
 The system consists of 4 sequential agents:
 
-### Agent 1: Ticket Classifier
+### Agent 1: Ticket Classifier ✅ IMPLEMENTED
 
 The Intent Classification Agent is the first agent in the Customer Support Ticket Triage System. It receives a raw customer support ticket and analyzes it using a local LLM (Llama 3.2 via Ollama) to extract structured information needed by the rest of the pipeline.
 
@@ -38,7 +38,7 @@ The Intent Classification Agent is the first agent in the Customer Support Ticke
 - Flag any missing information required to resolve the ticket
 
 **Input** (from shared state)
-- `ticket_id` — unique identifier for the ticket
+- `ticket_id` — unique genrated identifier for the ticket
 - `customer_name` — name of the customer
 - `ticket_text` — the raw support message written by the customer
 
@@ -49,8 +49,8 @@ The Intent Classification Agent is the first agent in the Customer Support Ticke
 - `missing_information` — list of absent but required fields such as `order_id`, `account_email`, `product_details`, or `evidence_attachment`
 
 **Files**
-- `agents/ticket_classifier_agent.py` — agent node logic, LLM call, and prompt
-- `tools/ticket_classifier_tool.py` — custom tool for reading the ticket dataset and logging results
+- [agents/ticket_classifier_agent.py](agents/ticket_classifier_agent.py) — agent node logic, LLM call, and prompt
+- [tools/ticket_classifier_tool.py](tools/ticket_classifier_tool.py) — custom tool for reading the ticket dataset and logging results
 
 **How to Run**
 ```bash
@@ -61,6 +61,10 @@ python -m agents.ticket_classifier_agent
 ```bash
 python -m pytest tests/test_ticket_classifier.py -q -s
 ```
+
+**Notes**
+- Tests are deterministic and use a local/test LLM adapter by default; configure Ollama or another LLM for real-world runs if desired.
+- The agent follows the project requirement to include file I/O and structured outputs (type hints and docstrings present).
 
 
 ### Agent 2: Knowledge Retrieval Agent
@@ -176,7 +180,7 @@ cat data/escalation_audit_log.json
 │   ├── graph.py                       # Multi-agent workflow graph
 │   └── main.py                        # Entry point
 ├── agents/
-│   ├── ticket_classifier_agent.py     # Agent 1 (Coming soon)
+│   ├── ticket_classifier_agent.py     # Agent 1 ✅ IMPLEMENTED
 │   ├── knowledge_retrieval_agent.py   # Agent 2 (Coming soon)
 │   ├── escalation_decision_agent.py   # Agent 3 ✅ IMPLEMENTED
 │   └── response_drafting_agent.py     # Agent 4 ✅ IMPLEMENTED
@@ -275,8 +279,6 @@ type data\generated_responses.jsonl
 - ✅ 11 unit tests (ALL PASSING ✅)
 - ✅ Integration tests (3/3 PASSING ✅)
 - ✅ Real-world file I/O confirmed working
-
-**Agents 1 & 2 - Pending** (placeholder sections in code)
 
 ### Project Deliverables Met
 

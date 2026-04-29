@@ -37,10 +37,10 @@ The Intent Classification Agent is the first agent in the Customer Support Ticke
 - Identify the customer's sentiment
 - Flag any missing information required to resolve the ticket
 
-**Input** (from shared state)
-- `ticket_id` — unique identifier for the ticket
-- `customer_name` — name of the customer
-- `ticket_text` — the raw support message written by the customer
+**Input Flow**
+- The tool prompts the user for `customer_name` and `ticket_text`
+- The tool auto-generates a random ticket ID in the format `TCK-0001`
+- The agent receives only `ticket_text` for LLM classification
 
 **Output** (stored back into shared state)
 - `category` — type of issue: `damaged_item`, `billing_issue`, `shipping_issue`, `account_issue`, `technical_issue`, `refund_request`, `missing_information`, or `general_inquiry`
@@ -48,9 +48,15 @@ The Intent Classification Agent is the first agent in the Customer Support Ticke
 - `sentiment` — `positive`, `neutral`, or `negative`
 - `missing_information` — list of absent but required fields such as `order_id`, `account_email`, `product_details`, or `evidence_attachment`
 
+**Final Tool Result**
+- `ticket_id`
+- `customer_name`
+- `ticket_text`
+- `classification` (the 4 fields produced by Agent 1)
+
 **Files**
-- `agents/ticket_classifier_agent.py` — agent node logic, LLM call, and prompt
-- `tools/ticket_classifier_tool.py` — custom tool for reading the ticket dataset and logging results
+- `agents/ticket_classifier_agent.py` — agent node logic, prompt rules, LLM invocation, and JSON parsing
+- `tools/ticket_classifier_tool.py` — interactive CLI input collection, random ticket ID generation, and result display
 
 **How to Run**
 ```bash
@@ -87,6 +93,27 @@ python -m pytest tests/test_ticket_classifier.py -q -s
 
 ### Agent 4: Response Drafting Agent
 *Coming soon...*
+
+---
+
+## Running Agent 1: Ticket Classifier
+
+### Prerequisites
+```bash
+# Ensure Python 3.10+ and dependencies are installed
+pip install -r requirements.txt  # or install manually
+pip install langchain langchain-ollama pytest
+```
+
+### Run Agent 1 (Interactive)
+```bash
+python -m agents.ticket_classifier_agent
+```
+
+### Test Agent 1
+```bash
+python -m pytest tests/test_ticket_classifier.py -q -s
+```
 
 ---
 
@@ -150,11 +177,12 @@ cat data/escalation_audit_log.json
 │   ├── graph.py                       # Multi-agent workflow graph
 │   └── main.py                        # Entry point
 ├── agents/
-│   ├── ticket_classifier_agent.py     # Agent 1 (Coming soon)
+│   ├── ticket_classifier_agent.py     # Agent 1 ✅ IMPLEMENTED
 │   ├── knowledge_retrieval_agent.py   # Agent 2 (Coming soon)
 │   ├── escalation_decision_agent.py   # Agent 3 ✅ IMPLEMENTED
 │   └── response_drafting_agent.py     # Agent 4 (Coming soon)
 ├── tools/
+│   ├── ticket_classifier_tool.py      # Agent 1 tool ✅ IMPLEMENTED
 │   ├── faq_search.py                  # FAQ search tool (optional)
 │   └── escalation_rules_engine.py     # Agent 3 custom tool ✅ IMPLEMENTED
 └── tests/
@@ -183,9 +211,10 @@ type data\escalation_audit_log.json
 
 ## Notes for Reviewers
 
+- ✅ Agent 1 (Ticket Classifier) is implemented and runnable
 - ✅ Agent 3 (Escalation Decision) is fully implemented and tested
 - ✅ All type hints and docstrings present
 - ✅ Real-world file I/O confirmed working
 - ✅ 100% test pass rate (11/11 tests)
-- Placeholder sections for Agents 1, 2, and 4
+- Placeholder sections for Agents 2 and 4
 - Custom Python tool: `tools/escalation_rules_engine.py` (real-world interaction with file system)

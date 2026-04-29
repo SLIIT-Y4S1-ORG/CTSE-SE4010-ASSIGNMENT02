@@ -12,7 +12,6 @@ from langchain_ollama import ChatOllama    # Connects to Ollama running locally 
 from agents.ticket_classifier_agent import ticket_classifier_node    # The main function of the ticket classifier agent that we want to test
 from app.state import SupportState      # The shared state object that holds all ticket information and classification results
 
-
 # ── Dataset loader ─────────────────────────────────────────────────────────────
 
 def _load_ticket_dataset() -> List[Dict[str, Any]]:    # Loads the ticket dataset from the local JSON file and returns it as a list of dictionaries. Each dictionary represents a support ticket with its details and expected classification results.
@@ -20,7 +19,6 @@ def _load_ticket_dataset() -> List[Dict[str, Any]]:    # Loads the ticket datase
     tickets_path = Path(__file__).resolve().parents[1] / "data" / "tickets.json"
     with tickets_path.open("r", encoding="utf-8") as f:
         return json.load(f)
-
 
 # ── LLM judge ─────────────────────────────────────────────────────────────────
 
@@ -56,7 +54,6 @@ def _judge_with_llm(ticket_text: str, expected: Dict[str, Any], actual: Dict[str
             raise
         return json.loads(match.group(0))
 
-
 # ── Pretty printer ─────────────────────────────────────────────────────────────
 
 def _print_ticket_result(
@@ -90,12 +87,10 @@ def _print_ticket_result(
         print(f"  Reason : {verdict.get('reason', 'Unknown')}")
     print("=" * 62)
 
-
 # ── Test ───────────────────────────────────────────────────────────────────────
 
 # Load all tickets once so we can number them 1-8
 _ALL_TICKETS = _load_ticket_dataset()
-
 
 @pytest.mark.parametrize("ticket", _ALL_TICKETS)
 def test_ticket_classifier_with_llm_judge(ticket: Dict[str, Any]) -> None:

@@ -64,7 +64,46 @@ python -m pytest tests/test_ticket_classifier.py -q -s
 
 
 ### Agent 2: Knowledge Retrieval Agent
-*Coming soon...*
+
+**Agent 2: Knowledge Retrieval Agent IMPLEMENTED**
+
+**What it does:**
+- Reads the ticket `category` produced by Agent 1 and searches the local
+  policy database for relevant rules.
+- Synthesizes a short, policy-grounded summary (`policy_matches`) using the
+  locally hosted Ollama model (recommended: `llama3.2`) so downstream agents
+  can make decisions confidently.
+
+Real-World Interaction:
+- **Reads** policies from `data/policies.json` via the tool in
+  `tools/faq_search.py`.
+- **Invokes** the local LLM through `langchain_ollama` (model `llama3.2`) in
+  `agents/knowledge_retrieval_agent.py` to extract the most relevant rule.
+
+**Key Files:**
+- `agents/knowledge_retrieval_agent.py` — agent node + LLM integration
+- `tools/faq_search.py` — local JSON policy lookup tool
+- `kretrieval_run_test.py` — small runnable demo for Agent 2
+- `tests/test_knowledge_retrieval.py` — unit tests (updated for LLM summary output)
+
+How to run (recommended):
+```bash
+# Activate project venv
+source venv/bin/activate
+
+# Run the Agent 2 demo (uses local Ollama model)
+venv/bin/python kretrieval_run_test.py
+
+# Run the Agent 2 tests (may require mocking the LLM or running with Ollama)
+pytest -q tests/test_knowledge_retrieval.py -s
+```
+
+Notes:
+- Tests were adjusted to expect a single concise `policy_matches` summary
+  (the LLM combines matching policies). To make tests deterministic, mock
+  the `llm.invoke()` call in `agents/knowledge_retrieval_agent.py` during test runs.
+- If you don't have Ollama running, the demo/tests should be run with a mocked
+  LLM client or using the project's venv where `langchain_ollama` is installed.
 
 ### Agent 3: Escalation Decision Agent ✅ **IMPLEMENTED**
 

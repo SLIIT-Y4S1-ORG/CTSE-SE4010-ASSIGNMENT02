@@ -1,29 +1,8 @@
-import json    # Used for parsing JSON strings into Python dictionaries
-import re    # Used for regular expressions to clean up LLM output
-from pathlib import Path    # Used to construct file paths in a platform-independent way
+from typing import Any, Callable
 
-# Path to the shared ticket dataset
-TICKETS_FILE = Path(__file__).resolve().parents[1] / "data" / "tickets.json"
+# ── Print formatted classification result ────────────────────────────────────────────────────────────────────────────
 
-
-def read_ticket_from_file(ticket_id: str) -> dict | None:    # Reads the ticket dataset from a local JSON file and searches for a ticket with the given ID. Returns the ticket data as a dictionary if found, or None if not found or if the file doesn't exist.  
-
-    if not TICKETS_FILE.exists():
-        return None
-
-    with TICKETS_FILE.open("r", encoding="utf-8") as f:
-        tickets = json.load(f)
-
-    # Search for the ticket with the matching ID
-    for ticket in tickets:
-        if ticket.get("ticket_id") == ticket_id:
-            return ticket
-
-    return None
-
-
-def log_classification_result(ticket_id: str, customer_name: str, classification: dict) -> None:    # Logs the classification result to the terminal in a clean, readable format. This is a custom "tool" function that the agent can call to output results.
-
+def log_classification_result(ticket_id: str, customer_name: str, classification: dict[str, Any]) -> None:
     missing = classification.get("missing_information", [])
 
     print("\n" + "=" * 50)
@@ -36,3 +15,27 @@ def log_classification_result(ticket_id: str, customer_name: str, classification
     print(f"  Sentiment            : {classification.get('sentiment')}")
     print(f"  Missing Information  : {', '.join(missing) if missing else 'None'}")
     print("=" * 50 + "\n")
+
+# ── Run full classification workflow ─────────────────────────────────────────────────────────────────────────────────
+
+def run_ticket_classification_flow(classify_fn: Callable[[dict[str, Any]], dict[str, Any]], request: dict[str, Any]) -> dict[str, Any]:
+    """Run ticket classification with provided request data."""
+    # call classifier function with ticket text
+    classification = classify_fn({"ticket_text": request["ticket_text"]})
+
+    # build final structured result
+    result = {
+        "ticket_id": request["ticket_id"],
+        "customer_name": request["customer_name"],
+        "ticket_text": request["ticket_text"],
+        "classification": classification,
+    }
+
+    # print formatted output in terminal
+    log_classification_result(
+        request["ticket_id"], 
+        request["customer_name"], 
+        classification
+    )
+
+    return result

@@ -10,8 +10,11 @@ from typing import Any, Dict
 if __package__ in (None, ""):
 	sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.graph import run_workflow
 from app.state import SupportState
+
+# Choose orchestrator: comment/uncomment one of the following
+from app.graph import run_workflow  # Manual orchestrator (default)
+# from app.langraph import run_langraph_workflow as run_workflow  # LangGraph orchestrator (alternative)
 
 def _next_ticket_id() -> str:
 	"""Generate a unique ticket ID."""

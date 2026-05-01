@@ -1,5 +1,8 @@
 import json   # for parsing LLM output
+import os     # for creating the audit log directory
 import re     # for cleaning LLM output (removing markdown code blocks)
+from datetime import datetime   # for audit timestamps
+from typing import Any   # for optional LLM injection and audit typing
 from langchain_core.messages import HumanMessage, SystemMessage  # for structured prompts
 from langchain_ollama import ChatOllama  # for LLM interaction
 from app.state import SupportState  # for shared state type
@@ -118,20 +121,62 @@ def _parse_llm_output(raw: str) -> dict:
         # fail if nothing valid found
         raise ValueError(f"Could not parse LLM output:\n{raw}")
 
+
+def _append_classification_audit_log(entry: dict[str, Any], log_path: str = "data/classification_audit_log.jsonl") -> None:
+    """Append one classification audit entry to disk as JSONL."""
+
+    directory = os.path.dirname(log_path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+
+    with open(log_path, "a", encoding="utf-8") as file:
+        file.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
 # ── Main agent node (runs classification) ───────────────────────────────
-def ticket_classifier_node(state: SupportState) -> dict:
+def ticket_classifier_node(
+    state: SupportState,
+    llm_client: Any | None = None,
+    log_path: str = "data/classification_audit_log.jsonl",
+) -> dict:
     # extract ticket text from state
     ticket_text = state.get("ticket_text", "")
+    ticket_id = str(state.get("ticket_id", "UNKNOWN"))
+    customer_name = str(state.get("customer_name", "UNKNOWN"))
+    llm_client = llm_client or llm
 
     print("\n[Agent 1] Llama 3.2 | Status: Classification started")
     # call LLM with system + user prompt
-    response = llm.invoke([SYSTEM_PROMPT, _build_human_prompt(ticket_text)])
+    response = llm_client.invoke([SYSTEM_PROMPT, _build_human_prompt(ticket_text)])
     # parse LLM response into structured JSON
     classification = _parse_llm_output(response.content)
 
     # ── Ensure missing_information is always a list ─────────────────────────────────────────────────────────────
     if not isinstance(classification.get("missing_information"), list):
         classification["missing_information"] = []
+
+    audit_entry = {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "agent": "ticket_classifier_agent",
+        "model": getattr(llm_client, "model", "unknown"),
+        "ticket_id": ticket_id,
+        "customer_name": customer_name,
+        "input": {
+            "ticket_text_snippet": ticket_text[:200],
+        },
+        "classification": {
+            "category": classification.get("category"),
+            "urgency": classification.get("urgency"),
+            "sentiment": classification.get("sentiment"),
+            "missing_information": classification.get("missing_information", []),
+        },
+    }
+
+    print(f"[Tool] Writing classification audit log for ticket {ticket_id}...")
+    try:
+        _append_classification_audit_log(audit_entry, log_path=log_path)
+        print(f"[Tool] Classification audit logged for {ticket_id}")
+    except Exception as exc:
+        print(f"[Tool] Classification audit logging failed: {exc}")
 
     # return structured output
     return {

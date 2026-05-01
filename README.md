@@ -27,11 +27,87 @@ This project implements a **multi-agent system** for automated customer support 
 
 The system consists of 4 sequential agents:
 
-### Agent 1: Ticket Classifier
-*Coming soon...*
+### Agent 1: Ticket Classifier ✅ IMPLEMENTED
+
+The Intent Classification Agent is the first agent in the Customer Support Ticket Triage System. It receives a raw customer support ticket and analyzes it using a local LLM (Llama 3.2 via Ollama) to extract structured information needed by the rest of the pipeline.
+
+**Responsibilities**
+- Classify the ticket into a support category
+- Detect the urgency level of the issue
+- Identify the customer's sentiment
+- Flag any missing information required to resolve the ticket
+
+**Input** (from shared state)
+- `ticket_id` — unique genrated identifier for the ticket
+- `customer_name` — name of the customer
+- `ticket_text` — the raw support message written by the customer
+
+**Output** (stored back into shared state)
+- `category` — type of issue: `damaged_item`, `billing_issue`, `shipping_issue`, `account_issue`, `technical_issue`, `refund_request`, `missing_information`, or `general_inquiry`
+- `urgency` — `low`, `medium`, or `high`
+- `sentiment` — `positive`, `neutral`, or `negative`
+- `missing_information` — list of absent but required fields such as `order_id`, `account_email`, `product_details`, or `evidence_attachment`
+
+**Files**
+- [agents/ticket_classifier_agent.py](agents/ticket_classifier_agent.py) — agent node logic, LLM call, and prompt
+- [tools/ticket_classifier_tool.py](tools/ticket_classifier_tool.py) — custom tool for reading the ticket dataset and logging results
+
+**How to Run**
+```bash
+python -m agents.ticket_classifier_agent
+```
+
+**How to Test**
+```bash
+python -m pytest tests/test_ticket_classifier.py -q -s
+```
+
+**Notes**
+- Tests are deterministic and use a local/test LLM adapter by default; configure Ollama or another LLM for real-world runs if desired.
+- The agent follows the project requirement to include file I/O and structured outputs (type hints and docstrings present).
+
 
 ### Agent 2: Knowledge Retrieval Agent
-*Coming soon...*
+
+**Agent 2: Knowledge Retrieval Agent IMPLEMENTED**
+
+**What it does:**
+- Reads the ticket `category` produced by Agent 1 and searches the local
+  policy database for relevant rules.
+- Synthesizes a short, policy-grounded summary (`policy_matches`) using the
+  locally hosted Ollama model (recommended: `llama3.2`) so downstream agents
+  can make decisions confidently.
+
+Real-World Interaction:
+- **Reads** policies from `data/policies.json` via the tool in
+  `tools/faq_search.py`.
+- **Invokes** the local LLM through `langchain_ollama` (model `llama3.2`) in
+  `agents/knowledge_retrieval_agent.py` to extract the most relevant rule.
+
+**Key Files:**
+- `agents/knowledge_retrieval_agent.py` — agent node + LLM integration
+- `tools/faq_search.py` — local JSON policy lookup tool
+- `kretrieval_run_test.py` — small runnable demo for Agent 2
+- `tests/test_knowledge_retrieval.py` — unit tests (updated for LLM summary output)
+
+How to run (recommended):
+```bash
+# Activate project venv
+source venv/bin/activate
+
+# Run the Agent 2 demo (uses local Ollama model)
+venv/bin/python kretrieval_run_test.py
+
+# Run the Agent 2 tests (may require mocking the LLM or running with Ollama)
+pytest -q tests/test_knowledge_retrieval.py -s
+```
+
+Notes:
+- Tests were adjusted to expect a single concise `policy_matches` summary
+  (the LLM combines matching policies). To make tests deterministic, mock
+  the `llm.invoke()` call in `agents/knowledge_retrieval_agent.py` during test runs.
+- If you don't have Ollama running, the demo/tests should be run with a mocked
+  LLM client or using the project's venv where `langchain_ollama` is installed.
 
 ### Agent 3: Escalation Decision Agent ✅ **IMPLEMENTED**
 
@@ -143,7 +219,7 @@ cat data/escalation_audit_log.json
 │   ├── graph.py                       # Multi-agent workflow graph
 │   └── main.py                        # Entry point
 ├── agents/
-│   ├── ticket_classifier_agent.py     # Agent 1 (Coming soon)
+│   ├── ticket_classifier_agent.py     # Agent 1 ✅ IMPLEMENTED
 │   ├── knowledge_retrieval_agent.py   # Agent 2 (Coming soon)
 │   ├── escalation_decision_agent.py   # Agent 3 ✅ IMPLEMENTED
 │   └── response_drafting_agent.py     # Agent 4 ✅ IMPLEMENTED
@@ -242,8 +318,6 @@ type data\generated_responses.jsonl
 - ✅ 11 unit tests (ALL PASSING ✅)
 - ✅ Integration tests (3/3 PASSING ✅)
 - ✅ Real-world file I/O confirmed working
-
-**Agents 1 & 2 - Pending** (placeholder sections in code)
 
 ### Project Deliverables Met
 

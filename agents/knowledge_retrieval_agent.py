@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 from datetime import datetime
 import json
 import os
+import re
 
 try:
     from langchain_core.messages import SystemMessage, HumanMessage     # type: ignore
@@ -110,6 +111,23 @@ def knowledge_retrieval_node(state: SupportState, top_k: int = 3) -> Dict[str, A
     else:
         print("[Agent 2] LLM is not available; skipping LLM extraction.")
 
+    # Ensure photo/proof requirement is preserved from source content
+    content_concat = " ".join([e.get("content","") for e in normalized]).lower()
+    requires_photo_kw = any(k in content_concat for k in ("photo", "proof", "image", "picture", "attachment", "evidence"))
+    has_photo_in_extracted = any(k in (extracted_text or "").lower() for k in ("photo", "proof", "image", "picture", "attachment", "evidence"))
+
+    if requires_photo_kw and not has_photo_in_extracted:
+        # try to pull a sentence from the source that mentions the evidence requirement
+        m = re.search(r'([^.]*?(photo|proof|image|picture|attachment|evidence)[^.]*\.)', content_concat)
+        if m:
+            sentence = m.group(1).strip()
+        else:
+            sentence = "Customers should provide clear photo evidence of the damage."
+        if extracted_text:
+            extracted_text = extracted_text.rstrip(". ") + ". " + sentence
+        else:
+            extracted_text = sentence
+
     # 3) Build structured policy matches and a legacy string list for downstream agents
     policy_match_details: List[Dict[str, Any]] = []
     policy_matches: List[str] = []
@@ -124,6 +142,19 @@ def knowledge_retrieval_node(state: SupportState, top_k: int = 3) -> Dict[str, A
             "extracted": extracted,
         })
         policy_matches.append(extracted)
+
+    # Deduplicate and keep only the best match for legacy policy_matches
+    seen = set()
+    unique_details = []
+    for d in policy_match_details:
+        key = (d.get("extracted") or d.get("content", "")).strip()
+        if key and key not in seen:
+            seen.add(key)
+            unique_details.append(d)
+
+    policy_match_details = unique_details
+    # legacy compatibility: single best-match string
+    policy_matches = [policy_match_details[0]["extracted"]] if policy_match_details else []
 
     faq_matches = [e["title"] for e in normalized]
 

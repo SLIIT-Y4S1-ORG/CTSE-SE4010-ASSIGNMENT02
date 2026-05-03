@@ -538,5 +538,37 @@
     "decision": "escalate_to_billing",
     "escalate_to": "billing",
     "reason": "High-urgency billing issue requires Billing Team verification and immediate action."
+  },
+  {
+    "timestamp": "2026-05-02T02:25:32.567713",
+    "ticket_id": "TCK-5373",
+    "customer_name": "Muditha",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-05-02T02:27:06.359339",
+    "ticket_id": "TCK-5562",
+    "customer_name": "Kusalya",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
+  },
+  {
+    "timestamp": "2026-05-02T02:28:06.385245",
+    "ticket_id": "TCK-3908",
+    "customer_name": "Kusalya",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": ""
+  },
+  {
+    "timestamp": "2026-05-02T02:29:08.131681",
+    "ticket_id": "TCK-6773",
+    "customer_name": "Muditha",
+    "decision": "approve",
+    "escalate_to": null,
+    "reason": "Damaged item with photo evidence qualifies for automatic refund/replacement per policy."
   }
 ]

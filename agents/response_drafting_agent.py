@@ -111,7 +111,10 @@ def response_drafting_node(
             "You are a customer support response writer. Draft empathetic, concise, "
             "policy-grounded replies. Do not include internal notes or unsupported "
             "promises. Do not mention hidden decision logic. Use only the provided "
-            "ticket details, policy summary, and next steps."
+            "ticket details, policy summary, and next steps. "
+            "IMPORTANT: If the decision is 'escalate_to_human_support' or similar, "
+            "DO NOT offer a refund or replacement or say they are eligible for one. "
+            "Instead, inform the customer that their ticket has been escalated to a specialist for further review."
         )
     )
     human_prompt = HumanMessage(
